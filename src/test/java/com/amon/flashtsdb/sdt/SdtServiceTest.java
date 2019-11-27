@@ -17,7 +17,7 @@ import java.util.List;
  * Created by chenyaming on 2019/11/27.
  */
 @SpringBootTest
-class SdtServiceTest {
+public class SdtServiceTest {
 
     @Autowired
     private SdtService sdtService;
@@ -25,6 +25,51 @@ class SdtServiceTest {
     @Test
     void sdtCompress() throws IOException, ParseException {
 
+        List<Point> pointList = getPointsFromTestFile();
+
+        List<SdtPeriod> sdtPeriodList = sdtService.sdtCompress(pointList, 1d);
+        Assert.assertEquals(4, sdtPeriodList.size());
+
+        sdtPeriodList = sdtService.sdtCompress(pointList, 0.2d);
+        Assert.assertEquals(11, sdtPeriodList.size());
+
+    }
+
+    @Test
+    void sdtUnCompress() throws IOException, ParseException {
+
+        List<Point> pointList = getPointsFromTestFile();
+        List<SdtPeriod> sdtPeriodList = sdtService.sdtCompress(pointList, 1d);
+
+        long bgTime = pointList.get(0).getX();
+        long endTime = pointList.get(pointList.size() - 1).getX();
+
+        List<Point> unCompressPointList = sdtService.sdtUnCompress(sdtPeriodList, bgTime, endTime, 60 * 1000L);
+
+        Assert.assertEquals(30, unCompressPointList.size());
+
+
+        unCompressPointList = sdtService.sdtUnCompress(sdtPeriodList, bgTime - 550 * 1000L, endTime - 550 * 1000L, 60 * 1000L);
+
+        Assert.assertEquals(20, unCompressPointList.size());
+
+        unCompressPointList = sdtService.sdtUnCompress(sdtPeriodList, bgTime + 550 * 1000L, endTime + 550 * 1000L, 60 * 1000L);
+
+        Assert.assertEquals(20, unCompressPointList.size());
+
+        unCompressPointList = sdtService.sdtUnCompress(sdtPeriodList, bgTime - 550 * 1000L, endTime + 550 * 1000L, 60 * 1000L);
+        Assert.assertEquals(29, unCompressPointList.size());
+
+        unCompressPointList = sdtService.sdtUnCompress(sdtPeriodList, bgTime - 5500 * 1000L, endTime - 5500 * 1000L, 60 * 1000L);
+        Assert.assertEquals(0, unCompressPointList.size());
+
+        unCompressPointList = sdtService.sdtUnCompress(sdtPeriodList, bgTime + 5500 * 1000L, endTime + 5500 * 1000L, 60 * 1000L);
+        Assert.assertEquals(0, unCompressPointList.size());
+
+
+    }
+
+    private List<Point> getPointsFromTestFile() throws IOException, ParseException {
         File file = ResourceUtils.getFile("classpath:sdt/testdata/test_data.txt");
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
@@ -57,13 +102,8 @@ class SdtServiceTest {
             }
 
         }
-
-        List<SdtPeriod> sdtPeriodList = sdtService.sdtCompress(pointList, 1d);
-        Assert.assertEquals(4, sdtPeriodList.size());
-
-        sdtPeriodList = sdtService.sdtCompress(pointList, 0.2d);
-        Assert.assertEquals(11, sdtPeriodList.size());
-
+        return pointList;
     }
+
 
 }

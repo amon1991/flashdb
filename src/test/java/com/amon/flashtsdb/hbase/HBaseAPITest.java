@@ -11,31 +11,23 @@ import java.util.Arrays;
  * Created by chenyaming on 2019/11/19.
  */
 @SpringBootTest
-class HBaseAPITest {
+public class HBaseAPITest {
 
     @Autowired
     private HBaseAPI hBaseAPI;
 
 
     @Test
-    void createTable() {
+    void createTableAndDeleteTable() {
 
         try {
-            hBaseAPI.createTable("flashtsdb", Arrays.asList("t"));
+            hBaseAPI.createTable("flashtsdbtest", Arrays.asList("t"));
+            hBaseAPI.deleteTable("flashtsdbtest");
         } catch (Exception e) {
             e.printStackTrace();
         }
 
     }
 
-    @Test
-    void deleteTable() {
 
-        try {
-            hBaseAPI.deleteTable("flashtsdb");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
 }

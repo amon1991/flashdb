@@ -82,6 +82,88 @@ public class SdtService {
         return sdtPeriodList;
     }
 
+    /**
+     * SDT algorithm uncompress function
+     *
+     * @param sdtPeriodList
+     * @param bgTime
+     * @param endTime
+     * @param interval
+     * @return
+     */
+    public List<Point> sdtUnCompress(List<SdtPeriod> sdtPeriodList, long bgTime, long endTime, long interval) {
+
+        List<Point> pointList = new ArrayList<>();
+
+        if (null != sdtPeriodList && sdtPeriodList.size() > 0) {
+
+            // recalculate bgTime and endTime
+            long globalBgTime = sdtPeriodList.get(0).getBgTime();
+            long globalEndTime = sdtPeriodList.get(sdtPeriodList.size() - 1).getEndTime();
+
+            if (bgTime > globalEndTime || endTime < globalBgTime) {
+                return pointList;
+            }
+
+            if (bgTime < globalBgTime && endTime < globalEndTime) {
+                while (bgTime < globalBgTime) {
+                    bgTime += interval;
+                }
+            }
+
+            if (globalBgTime < bgTime && globalEndTime < endTime) {
+                long tempEndTime = bgTime;
+                while (tempEndTime < globalEndTime) {
+                    tempEndTime += interval;
+                }
+                endTime = tempEndTime - interval;
+            }
+
+            if (bgTime < globalBgTime && endTime > globalEndTime) {
+                while (bgTime < globalBgTime) {
+                    bgTime += interval;
+                }
+                long tempEndTime = bgTime;
+                while (tempEndTime < globalEndTime) {
+                    tempEndTime += interval;
+                }
+                endTime = tempEndTime - interval;
+            }
+
+            // final check
+            if (bgTime > globalEndTime || endTime < globalBgTime) {
+                return pointList;
+            }
+
+            long interpolatingTime = bgTime;
+            for (SdtPeriod sdtPeriod : sdtPeriodList) {
+
+                long periodBgTime = sdtPeriod.getBgTime();
+                double periodBgValue = sdtPeriod.getBgValue();
+                long periodEndTime = sdtPeriod.getEndTime();
+                double grad = sdtPeriod.getGradient();
+
+                if (interpolatingTime >= periodBgTime && interpolatingTime <= periodEndTime) {
+                    while (interpolatingTime <= periodEndTime && interpolatingTime <= endTime) {
+                        Point point = new Point();
+                        point.setX(interpolatingTime);
+                        point.setY(periodBgValue + (interpolatingTime - periodBgTime) * grad);
+                        pointList.add(point);
+                        interpolatingTime += interval;
+                    }
+                }
+
+                if (interpolatingTime > endTime) {
+                    break;
+                }
+
+            }
+
+        }
+
+        return pointList;
+    }
+
     private SdtPeriod structSdtPeriod(SdtPoints sdtPoints) {
         SdtPeriod sdtPeriod = new SdtPeriod();
         sdtPeriod.setBgTime(sdtPoints.getBeginPoint().getX());
