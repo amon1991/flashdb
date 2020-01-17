@@ -1,3 +1,17 @@
 hbase:
   config:
     hbase.zookeeper.quorum: zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+
+spring:
+  redis:
+    password: dpp123456+_)
+    host: redis-host
+    port: 6379
+    database: 2
+    jedis:
+      pool:
+        max-active: 8
+        max-wait: -1
+        max-idle: 8
+        min-idle: 0
+
