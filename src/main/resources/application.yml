@@ -1,3 +1,8 @@
+flashtsdb:
+  config:
+    tablename: flashtsdb
+    accuracy: 0.1
+
 hbase:
   config:
     hbase.zookeeper.quorum: zookeeper1:2181,zookeeper2:2181,zookeeper3:2181

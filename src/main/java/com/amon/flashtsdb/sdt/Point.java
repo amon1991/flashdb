@@ -4,7 +4,7 @@ package com.amon.flashtsdb.sdt;
  * @author yaming.chen@siemens.com
  * Created by chenyaming on 2019/11/27.
  */
-public class Point {
+public class Point implements Comparable<Point> {
 
     private long x;
     private double y;
@@ -24,5 +24,10 @@ public class Point {
     public void setY(double y) {
         this.y = y;
     }
-    
+
+
+    @Override
+    public int compareTo(Point point) {
+        return Long.valueOf(x).compareTo(Long.valueOf(point.x));
+    }
 }

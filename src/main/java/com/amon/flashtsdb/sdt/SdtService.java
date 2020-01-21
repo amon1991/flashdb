@@ -20,10 +20,10 @@ public class SdtService {
      * SDT algorithm compress function
      *
      * @param originPoints
-     * @param AccuracyE
+     * @param accuracyE
      * @return
      */
-    public List<SdtPeriod> sdtCompress(List<Point> originPoints, double AccuracyE) {
+    public List<SdtPeriod> sdtCompress(List<Point> originPoints, double accuracyE) {
         List<SdtPeriod> sdtPeriodList = new ArrayList<>();
 
         if (null != originPoints && originPoints.size() > 0) {
@@ -39,14 +39,14 @@ public class SdtService {
                     sdtPoints.setBeginPoint(currentPoint);
                 } else {
 
-                    double nowUpGate = (currentPoint.getY() - sdtPoints.getBeginPoint().getY() - AccuracyE) /
+                    double nowUpGate = (currentPoint.getY() - sdtPoints.getBeginPoint().getY() - accuracyE) /
                             (currentPoint.getX() - sdtPoints.getBeginPoint().getX());
 
                     if (nowUpGate > upGate) {
                         upGate = nowUpGate;
                     }
 
-                    double nowDownGate = (currentPoint.getY() - sdtPoints.getBeginPoint().getY() + AccuracyE) /
+                    double nowDownGate = (currentPoint.getY() - sdtPoints.getBeginPoint().getY() + accuracyE) /
                             (currentPoint.getX() - sdtPoints.getBeginPoint().getX());
 
                     if (nowDownGate < downGate) {
@@ -58,9 +58,9 @@ public class SdtService {
                         sdtPeriodList.add(structSdtPeriod(sdtPoints));
 
                         // update gates
-                        upGate = (currentPoint.getY() - sdtPoints.getLastPoint().getY() - AccuracyE) /
+                        upGate = (currentPoint.getY() - sdtPoints.getLastPoint().getY() - accuracyE) /
                                 (currentPoint.getX() - sdtPoints.getLastPoint().getX());
-                        downGate = (currentPoint.getY() - sdtPoints.getLastPoint().getY() + AccuracyE) /
+                        downGate = (currentPoint.getY() - sdtPoints.getLastPoint().getY() + accuracyE) /
                                 (currentPoint.getX() - sdtPoints.getLastPoint().getX());
 
                         sdtPoints.setBeginPoint(sdtPoints.getLastPoint());

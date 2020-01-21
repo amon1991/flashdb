@@ -108,7 +108,7 @@ public class HBaseUtil {
      * @param dataMap
      * @throws Exception
      */
-    public void batchInsertRows(String tableName, Map<byte[], List<FlashCell>> dataMap) throws Exception {
+    public int batchInsertRows(String tableName, Map<byte[], List<FlashCell>> dataMap) throws Exception {
 
         Admin admin = connection.getAdmin();
         if (admin.tableExists(TableName.valueOf(tableName))) {
@@ -129,11 +129,16 @@ public class HBaseUtil {
                     list.add(put);
                 }
             }
+            int insertnum = 0;
             if (list.size() > 0) {
                 table.put(list);
+                insertnum = list.size();
             }
             table.close();
+            return insertnum;
 
+        } else {
+            return 0;
         }
 
     }
