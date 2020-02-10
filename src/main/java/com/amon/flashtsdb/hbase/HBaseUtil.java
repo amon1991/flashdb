@@ -185,7 +185,6 @@ public class HBaseUtil {
             }
             table.delete(list);
             table.close();
-
         }
 
     }
