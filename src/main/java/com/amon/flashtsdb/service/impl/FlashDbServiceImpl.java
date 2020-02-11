@@ -67,16 +67,43 @@ public class FlashDbServiceImpl implements FlashDbService {
 
                 SplitTagPointList splitTagPointList = new SplitTagPointList();
                 splitTagPointLists.add(splitTagPointList);
-                splitTagPointList.setTag(tagPointList.getTag());
+                splitTagPointList.setTag(tag);
 
                 List<DayData> dayDataList = new ArrayList<>();
                 splitTagPointList.setDayDataList(dayDataList);
 
                 // todo: get accuracyE in redis
+                splitTagPointList.setAccuracyE(defaultAccuracy);
+
+                int startDayTimestamp = 0;
+                int startHourQualifier = -1;
+                DayData dayData = null;
+                HourData hourData = null;
 
                 // split to day data
                 for (Point point : pointList) {
 
+                    Integer currnetDayTime = getDayTimeStamp(point.getX());
+
+                    if (currnetDayTime>startDayTimestamp){
+                        startDayTimestamp = currnetDayTime;
+                        dayData = new DayData();
+                        dayData.setTimestamp(currnetDayTime);
+                        dayData.setHourDataList(new ArrayList<>());
+                        dayDataList.add(dayData);
+                    }
+
+                    Integer currentHourQualifier = getHourQualifier(point.getX());
+
+                    if (currentHourQualifier.intValue()!=startHourQualifier){
+                        startHourQualifier = currentHourQualifier;
+                        hourData = new HourData();
+                        hourData.setQualifier(currentHourQualifier);
+                        hourData.setPointList(new ArrayList<>());
+                        dayData.getHourDataList().add(hourData);
+                    }
+
+                    hourData.getPointList().add(point);
 
                 }
 
@@ -86,6 +113,14 @@ public class FlashDbServiceImpl implements FlashDbService {
 
         }
         return new ArrayList<>();
+    }
+
+    public Integer getDayTimeStamp(long timestamp){
+        return Math.toIntExact(timestamp / (24 * 3600 * 1000L));
+    }
+
+    public Integer getHourQualifier(long timestamp){
+        return Math.toIntExact(timestamp / (3600 * 1000L))%24;
     }
 
 
