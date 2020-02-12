@@ -23,6 +23,15 @@ public interface FlashDbService {
 
 
     /**
+     * save data points to flash-tsdb
+     *
+     * @param tagPointLists
+     * @return
+     */
+    int saveDataPoints(List<TagPointList> tagPointLists);
+
+
+    /**
      * convert tagPointLists to SplitTagPointLists
      *
      * @param tagPointLists
@@ -40,6 +49,11 @@ public interface FlashDbService {
     int dump2Hbase(@NotNull List<SplitTagPointList> dataList);
 
 
-    List<Point> searchPoints();
+    /**
+     * search datapoints
+     * @param pointsSearchRequest
+     * @return
+     */
+    List<TagPointList> searchPoints(PointsSearchRequest pointsSearchRequest);
 
 }

@@ -1,9 +1,12 @@
 package com.amon.flashtsdb.service.impl;
 
 import com.amon.flashtsdb.FlashtsdbApplication;
+import com.amon.flashtsdb.entity.PointsSearchMode;
+import com.amon.flashtsdb.entity.PointsSearchRequest;
 import com.amon.flashtsdb.entity.SplitTagPointList;
 import com.amon.flashtsdb.entity.TagPointList;
 import com.amon.flashtsdb.sdt.Point;
+import com.amon.flashtsdb.sdt.SdtServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -11,9 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.TimeZone;
 
@@ -86,4 +91,37 @@ public class FlashDbServiceImplTest {
         Assert.assertEquals(3,splitTagPointLists.get(0).getDayDataList().size());
 
     }
+
+    @Test
+    public void saveDataPointsAndSearchPoints() throws IOException, ParseException {
+
+        String tag = "TestTag01";
+
+        List<Point> pointList = new SdtServiceTest().getPointsFromTestFile();
+
+        List<TagPointList> tagPointLists = new ArrayList<>();
+        TagPointList tagPointList = new TagPointList();
+        tagPointList.setTag(tag);
+        tagPointList.setPointList(pointList);
+        tagPointLists.add(tagPointList);
+
+        int successnum = flashDbService.saveDataPoints(tagPointLists);
+        Assert.assertNotEquals(0,successnum);
+
+        long bgTime = pointList.get(0).getX();
+        long endTime = pointList.get(pointList.size()-1).getX();
+
+        PointsSearchRequest pointsSearchRequest = new PointsSearchRequest();
+        pointsSearchRequest.setBgTime(bgTime);
+        pointsSearchRequest.setEndTime(endTime);
+        pointsSearchRequest.setSearchInterval(60);
+        pointsSearchRequest.setTagList(Arrays.asList(tag));
+        pointsSearchRequest.setSearchMode(PointsSearchMode.INTERPOLATED.getMode());
+
+        tagPointLists = flashDbService.searchPoints(pointsSearchRequest);
+
+        Assert.assertNotNull(tagPointLists);
+
+    }
+
 }

@@ -69,7 +69,7 @@ public class SdtServiceTest {
 
     }
 
-    private List<Point> getPointsFromTestFile() throws IOException, ParseException {
+    public List<Point> getPointsFromTestFile() throws IOException, ParseException {
         File file = ResourceUtils.getFile("classpath:sdt/testdata/test_data.txt");
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 

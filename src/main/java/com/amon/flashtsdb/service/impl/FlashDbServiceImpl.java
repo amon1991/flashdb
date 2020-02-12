@@ -5,8 +5,12 @@ import com.amon.flashtsdb.entity.*;
 import com.amon.flashtsdb.hbase.HBaseUtil;
 import com.amon.flashtsdb.hbase.RowKeyUtil;
 import com.amon.flashtsdb.sdt.Point;
+import com.amon.flashtsdb.sdt.SdtPeriod;
 import com.amon.flashtsdb.sdt.SdtService;
 import com.amon.flashtsdb.service.FlashDbService;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +29,8 @@ public class FlashDbServiceImpl implements FlashDbService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    private final static int DAY_HOURS = 24;
+
     @Value("${flashtsdb.config.tablename}")
     private String hbaseTableName;
 
@@ -42,6 +48,11 @@ public class FlashDbServiceImpl implements FlashDbService {
         this.hBaseUtil = hBaseUtil;
         this.rowKeyUtil = rowKeyUtil;
         this.sdtService = sdtService;
+    }
+
+    @Override
+    public int saveDataPoints(List<TagPointList> tagPointLists) {
+        return dump2Hbase(convert2SplitTagPointList(tagPointLists));
     }
 
     /**
@@ -195,13 +206,84 @@ public class FlashDbServiceImpl implements FlashDbService {
         }
 
         return 0;
-
     }
 
     @Override
-    public List<Point> searchPoints() {
+    public List<TagPointList> searchPoints(PointsSearchRequest pointsSearchRequest) {
 
-        return null;
+        if (null!=pointsSearchRequest && null!=pointsSearchRequest.getSearchMode()){
+
+            if (null!=pointsSearchRequest.getTagList() && pointsSearchRequest.getTagList().size()>0){
+
+                List<String> tagList = pointsSearchRequest.getTagList();
+                Integer searchMode = pointsSearchRequest.getSearchMode();
+                long bgTime = pointsSearchRequest.getBgTime();
+                long endTime = pointsSearchRequest.getEndTime();
+                Integer searchInterval = pointsSearchRequest.getSearchInterval();
+
+                if (endTime>=bgTime){
+
+                    Integer bgDayTimestamp = getDayTimeStamp(bgTime);
+                    Integer endDayTimestamp = getDayTimeStamp(endTime);
+
+                    List<TagPointList> tagPointLists = new ArrayList<>();
+                    for (String tag : tagList) {
+
+                        byte[] startRowkey = rowKeyUtil.tag2Rowkey(tag, bgDayTimestamp);
+                        byte[] endRowkey = rowKeyUtil.tag2Rowkey(tag,endDayTimestamp);
+
+                        TagPointList tagPointList = new TagPointList();
+                        tagPointLists.add(tagPointList);
+                        tagPointList.setTag(tag);
+
+                        List<SdtPeriod> mergedSdtPeriodList = new ArrayList<>();
+
+                        try {
+                            ResultScanner resultScanner = hBaseUtil.scanByStartAndStopRowKey(hbaseTableName,startRowkey,endRowkey);
+
+                            Iterator<Result> iterator = resultScanner.iterator();
+                            while (iterator.hasNext()) {
+
+                                Result myresult = iterator.next();
+                                Assert.assertNotNull(myresult);
+                                byte[] rowKey = myresult.getRow();
+                                FlashRowkey flashRowkey = rowKeyUtil.rowkey2FlashRowkey(rowKey);
+                                System.out.println(flashRowkey);
+
+                                for (int i =0;i<DAY_HOURS;i++){
+                                    List<SdtPeriod> sdtPeriodList = JSON.parseArray(hBaseUtil.getValueByResult(myresult,defaultColumnFamily,i+""),SdtPeriod.class);
+                                    if (null!=sdtPeriodList && sdtPeriodList.size()>0) {
+                                        mergedSdtPeriodList.addAll(sdtPeriodList);
+                                    }
+                                }
+
+                            }
+
+                            // uncompress point data
+                            if (searchMode.intValue() == PointsSearchMode.INTERPOLATED.getMode().intValue()) {
+                                tagPointList.setPointList(sdtService.sdtUnCompress(mergedSdtPeriodList, bgTime, endTime, searchInterval.longValue() * 1000L));
+                            }else {
+                                // todo
+
+                            }
+
+                        } catch (Exception e) {
+                            logger.error("Hbase scan data error:{}",e.getMessage(),e);
+                            e.printStackTrace();
+                        }
+
+                    }
+                    return tagPointLists;
+
+                }
+
+
+            }
+
+        }
+
+        return new ArrayList<>();
     }
+
 
 }
