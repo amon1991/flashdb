@@ -119,7 +119,10 @@ public class FlashDbServiceImplTest {
         pointsSearchRequest.setSearchMode(PointsSearchMode.INTERPOLATED.getMode());
 
         tagPointLists = flashDbService.searchPoints(pointsSearchRequest);
+        Assert.assertNotNull(tagPointLists);
 
+        pointsSearchRequest.setSearchMode(PointsSearchMode.RAW.getMode());
+        tagPointLists = flashDbService.searchPoints(pointsSearchRequest);
         Assert.assertNotNull(tagPointLists);
 
     }

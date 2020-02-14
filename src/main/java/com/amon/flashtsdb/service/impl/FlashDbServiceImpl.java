@@ -10,7 +10,6 @@ import com.amon.flashtsdb.sdt.SdtService;
 import com.amon.flashtsdb.service.FlashDbService;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,7 +95,7 @@ public class FlashDbServiceImpl implements FlashDbService {
 
                     Integer currnetDayTime = getDayTimeStamp(point.getX());
 
-                    if (currnetDayTime>startDayTimestamp){
+                    if (currnetDayTime > startDayTimestamp) {
                         startDayTimestamp = currnetDayTime;
                         dayData = new DayData();
                         dayData.setTimestamp(currnetDayTime);
@@ -106,7 +105,7 @@ public class FlashDbServiceImpl implements FlashDbService {
 
                     Integer currentHourQualifier = getHourQualifier(point.getX());
 
-                    if (currentHourQualifier.intValue()!=startHourQualifier){
+                    if (currentHourQualifier.intValue() != startHourQualifier) {
                         startHourQualifier = currentHourQualifier;
                         hourData = new HourData();
                         hourData.setQualifier(currentHourQualifier);
@@ -126,12 +125,12 @@ public class FlashDbServiceImpl implements FlashDbService {
         return new ArrayList<>();
     }
 
-    public Integer getDayTimeStamp(long timestamp){
+    public Integer getDayTimeStamp(long timestamp) {
         return Math.toIntExact(timestamp / (24 * 3600 * 1000L));
     }
 
-    public Integer getHourQualifier(long timestamp){
-        return Math.toIntExact(timestamp / (3600 * 1000L))%24;
+    public Integer getHourQualifier(long timestamp) {
+        return Math.toIntExact(timestamp / (3600 * 1000L)) % 24;
     }
 
 
@@ -211,9 +210,9 @@ public class FlashDbServiceImpl implements FlashDbService {
     @Override
     public List<TagPointList> searchPoints(PointsSearchRequest pointsSearchRequest) {
 
-        if (null!=pointsSearchRequest && null!=pointsSearchRequest.getSearchMode()){
+        if (null != pointsSearchRequest && null != pointsSearchRequest.getSearchMode()) {
 
-            if (null!=pointsSearchRequest.getTagList() && pointsSearchRequest.getTagList().size()>0){
+            if (null != pointsSearchRequest.getTagList() && pointsSearchRequest.getTagList().size() > 0) {
 
                 List<String> tagList = pointsSearchRequest.getTagList();
                 Integer searchMode = pointsSearchRequest.getSearchMode();
@@ -221,7 +220,7 @@ public class FlashDbServiceImpl implements FlashDbService {
                 long endTime = pointsSearchRequest.getEndTime();
                 Integer searchInterval = pointsSearchRequest.getSearchInterval();
 
-                if (endTime>=bgTime){
+                if (endTime >= bgTime) {
 
                     Integer bgDayTimestamp = getDayTimeStamp(bgTime);
                     Integer endDayTimestamp = getDayTimeStamp(endTime);
@@ -230,7 +229,7 @@ public class FlashDbServiceImpl implements FlashDbService {
                     for (String tag : tagList) {
 
                         byte[] startRowkey = rowKeyUtil.tag2Rowkey(tag, bgDayTimestamp);
-                        byte[] endRowkey = rowKeyUtil.tag2Rowkey(tag,endDayTimestamp);
+                        byte[] endRowkey = rowKeyUtil.tag2Rowkey(tag, endDayTimestamp);
 
                         TagPointList tagPointList = new TagPointList();
                         tagPointLists.add(tagPointList);
@@ -239,20 +238,15 @@ public class FlashDbServiceImpl implements FlashDbService {
                         List<SdtPeriod> mergedSdtPeriodList = new ArrayList<>();
 
                         try {
-                            ResultScanner resultScanner = hBaseUtil.scanByStartAndStopRowKey(hbaseTableName,startRowkey,endRowkey);
+                            ResultScanner resultScanner = hBaseUtil.scanByStartAndStopRowKey(hbaseTableName, startRowkey, endRowkey);
 
                             Iterator<Result> iterator = resultScanner.iterator();
                             while (iterator.hasNext()) {
 
                                 Result myresult = iterator.next();
-                                Assert.assertNotNull(myresult);
-                                byte[] rowKey = myresult.getRow();
-                                FlashRowkey flashRowkey = rowKeyUtil.rowkey2FlashRowkey(rowKey);
-                                System.out.println(flashRowkey);
-
-                                for (int i =0;i<DAY_HOURS;i++){
-                                    List<SdtPeriod> sdtPeriodList = JSON.parseArray(hBaseUtil.getValueByResult(myresult,defaultColumnFamily,i+""),SdtPeriod.class);
-                                    if (null!=sdtPeriodList && sdtPeriodList.size()>0) {
+                                for (int i = 0; i < DAY_HOURS; i++) {
+                                    List<SdtPeriod> sdtPeriodList = JSON.parseArray(hBaseUtil.getValueByResult(myresult, defaultColumnFamily, i + ""), SdtPeriod.class);
+                                    if (null != sdtPeriodList && sdtPeriodList.size() > 0) {
                                         mergedSdtPeriodList.addAll(sdtPeriodList);
                                     }
                                 }
@@ -262,13 +256,28 @@ public class FlashDbServiceImpl implements FlashDbService {
                             // uncompress point data
                             if (searchMode.intValue() == PointsSearchMode.INTERPOLATED.getMode().intValue()) {
                                 tagPointList.setPointList(sdtService.sdtUnCompress(mergedSdtPeriodList, bgTime, endTime, searchInterval.longValue() * 1000L));
-                            }else {
-                                // todo
+                            } else if (searchMode.intValue() == PointsSearchMode.RAW.getMode().intValue()) {
+
+                                List<Point> pointList = new ArrayList<>();
+                                tagPointList.setPointList(pointList);
+
+                                if (null != mergedSdtPeriodList && mergedSdtPeriodList.size() > 0) {
+
+                                    for (SdtPeriod sdtPeriod : mergedSdtPeriodList) {
+
+                                        Point bgPoint = new Point();
+                                        bgPoint.setX(sdtPeriod.getBgTime());
+                                        bgPoint.setY(sdtPeriod.getBgValue());
+                                        pointList.add(bgPoint);
+
+                                    }
+
+                                }
 
                             }
 
                         } catch (Exception e) {
-                            logger.error("Hbase scan data error:{}",e.getMessage(),e);
+                            logger.error("Hbase scan data error:{}", e.getMessage(), e);
                             e.printStackTrace();
                         }
 
