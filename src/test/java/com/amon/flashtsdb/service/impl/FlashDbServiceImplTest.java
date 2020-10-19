@@ -1,10 +1,8 @@
 package com.amon.flashtsdb.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.amon.flashtsdb.FlashtsdbApplication;
-import com.amon.flashtsdb.entity.PointsSearchMode;
-import com.amon.flashtsdb.entity.PointsSearchRequest;
-import com.amon.flashtsdb.entity.SplitTagPointList;
-import com.amon.flashtsdb.entity.TagPointList;
+import com.amon.flashtsdb.entity.*;
 import com.amon.flashtsdb.sdt.Point;
 import com.amon.flashtsdb.sdt.SdtServiceTest;
 import org.junit.Assert;
@@ -17,10 +15,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.TimeZone;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author yaming.chen@siemens.com
@@ -77,18 +73,18 @@ public class FlashDbServiceImplTest {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
         long startTime = sdf.parse("2020-01-20 12:11:10").getTime();
-        long skipTime = 1800*1000L;
+        long skipTime = 1800 * 1000L;
         for (int i = 0; i < 100; i++) {
             Point point = new Point();
             point.setX(startTime);
             point.setY(10.0d);
             tagPointList.getPointList().add(point);
-            startTime+=skipTime;
+            startTime += skipTime;
         }
 
         List<SplitTagPointList> splitTagPointLists = flashDbService.convert2SplitTagPointList(tagPointLists);
         Assert.assertNotNull(splitTagPointLists);
-        Assert.assertEquals(3,splitTagPointLists.get(0).getDayDataList().size());
+        Assert.assertEquals(3, splitTagPointLists.get(0).getDayDataList().size());
 
     }
 
@@ -105,11 +101,13 @@ public class FlashDbServiceImplTest {
         tagPointList.setPointList(pointList);
         tagPointLists.add(tagPointList);
 
+        System.out.println(JSON.toJSONString(tagPointLists));
+
         int successnum = flashDbService.saveDataPoints(tagPointLists);
-        Assert.assertNotEquals(0,successnum);
+        Assert.assertNotEquals(0, successnum);
 
         long bgTime = pointList.get(0).getX();
-        long endTime = pointList.get(pointList.size()-1).getX();
+        long endTime = pointList.get(pointList.size() - 1).getX();
 
         PointsSearchRequest pointsSearchRequest = new PointsSearchRequest();
         pointsSearchRequest.setBgTime(bgTime);
@@ -118,12 +116,50 @@ public class FlashDbServiceImplTest {
         pointsSearchRequest.setTagList(Arrays.asList(tag));
         pointsSearchRequest.setSearchMode(PointsSearchMode.INTERPOLATED.getMode());
 
+
+        System.out.println(JSON.toJSONString(pointsSearchRequest));
         tagPointLists = flashDbService.searchPoints(pointsSearchRequest);
         Assert.assertNotNull(tagPointLists);
 
         pointsSearchRequest.setSearchMode(PointsSearchMode.RAW.getMode());
+
+        System.out.println(JSON.toJSONString(pointsSearchRequest));
         tagPointLists = flashDbService.searchPoints(pointsSearchRequest);
         Assert.assertNotNull(tagPointLists);
+
+    }
+
+    @Test
+    public void createTagList() {
+
+        List<TagInfo> tagInfoList = new ArrayList<>();
+
+        String tagCode01 = "tagCode1:" + UUID.randomUUID().toString();
+        String tagCode02 = "tagCode2:" + UUID.randomUUID().toString();
+
+        TagInfo tagInfo01 = new TagInfo(tagCode01, "tagName", "tagDescription", "tagUnit", 0.1d, System.currentTimeMillis());
+        TagInfo tagInfo02 = new TagInfo(tagCode02, "tagName", "tagDescription", "tagUnit", 0.1d, System.currentTimeMillis());
+
+        tagInfoList.add(tagInfo01);
+        tagInfoList.add(tagInfo02);
+
+        int successNum = flashDbService.createTagList(tagInfoList);
+        Assert.assertEquals(2, successNum);
+
+        String tagCode03 = "tagCode3:" + UUID.randomUUID().toString();
+        TagInfo tagInfo03 = new TagInfo(tagCode03, "tagName", "tagDescription", "tagUnit", 0.1d, System.currentTimeMillis());
+        tagInfoList.add(tagInfo03);
+        successNum = flashDbService.createTagList(tagInfoList);
+        Assert.assertEquals(1, successNum);
+
+        successNum = flashDbService.createTagList(tagInfoList);
+        Assert.assertEquals(0, successNum);
+
+        List<String> tagCodeList = tagInfoList.stream().map(tagInfo -> {
+            return tagInfo.getTagCode();
+        }).collect(Collectors.toList());
+        int deleteNum = Math.toIntExact(flashDbService.deleteTagList(tagCodeList));
+        Assert.assertEquals(3, deleteNum);
 
     }
 

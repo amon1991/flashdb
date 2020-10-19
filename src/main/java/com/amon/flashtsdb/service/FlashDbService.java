@@ -1,19 +1,11 @@
 package com.amon.flashtsdb.service;
 
-import com.alibaba.fastjson.JSON;
-import com.amon.flashtsdb.entity.*;
-import com.amon.flashtsdb.hbase.HBaseUtil;
-import com.amon.flashtsdb.hbase.RowKeyUtil;
-import com.amon.flashtsdb.sdt.Point;
-import com.amon.flashtsdb.sdt.SdtService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import com.amon.flashtsdb.entity.PointsSearchRequest;
+import com.amon.flashtsdb.entity.TagInfo;
+import com.amon.flashtsdb.entity.TagPointList;
 
-import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @author yaming.chen@siemens.com
@@ -32,28 +24,46 @@ public interface FlashDbService {
 
 
     /**
-     * convert tagPointLists to SplitTagPointLists
+     * search datapoints by params
      *
-     * @param tagPointLists
-     * @return
-     */
-    List<SplitTagPointList> convert2SplitTagPointList(List<TagPointList> tagPointLists);
-
-
-    /**
-     * dump data to hbase
-     *
-     * @param dataList
-     * @return
-     */
-    int dump2Hbase(@NotNull List<SplitTagPointList> dataList);
-
-
-    /**
-     * search datapoints
      * @param pointsSearchRequest
      * @return
      */
     List<TagPointList> searchPoints(PointsSearchRequest pointsSearchRequest);
+
+    /**
+     * create tags in flash-tsdb
+     *
+     * @param tagInfoList
+     * @return
+     */
+    int createTagList(List<TagInfo> tagInfoList);
+
+
+    /**
+     * delete tags in flash-tsdb
+     *
+     * @param tagCodeList
+     * @return
+     */
+    Long deleteTagList(List<String> tagCodeList);
+
+
+    /**
+     * check if all tags have been created in the list
+     *
+     * @param tagCodeSet
+     * @return
+     */
+    boolean checkTagList(Set<String> tagCodeSet);
+
+    /**
+     * search tags by regex from flash tsdb
+     *
+     * @param regex
+     * @return
+     */
+    List<TagInfo> searchTags(String regex);
+
 
 }

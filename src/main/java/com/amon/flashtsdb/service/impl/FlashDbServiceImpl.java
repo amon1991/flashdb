@@ -8,16 +8,27 @@ import com.amon.flashtsdb.sdt.Point;
 import com.amon.flashtsdb.sdt.SdtPeriod;
 import com.amon.flashtsdb.sdt.SdtService;
 import com.amon.flashtsdb.service.FlashDbService;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.StringRedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.validation.constraints.NotNull;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.amon.flashtsdb.hbase.RowKeyUtil.TAGID_INDEX;
 
 /**
  * @author yaming.chen@siemens.com
@@ -30,6 +41,8 @@ public class FlashDbServiceImpl implements FlashDbService {
 
     private final static int DAY_HOURS = 24;
 
+    public static final String TAGINFO_LIST = "TAGINFO_LIST:";
+
     @Value("${flashtsdb.config.tablename}")
     private String hbaseTableName;
 
@@ -41,12 +54,17 @@ public class FlashDbServiceImpl implements FlashDbService {
     private final HBaseUtil hBaseUtil;
     private final RowKeyUtil rowKeyUtil;
     private final SdtService sdtService;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Autowired
-    public FlashDbServiceImpl(HBaseUtil hBaseUtil, RowKeyUtil rowKeyUtil, SdtService sdtService) {
+    public FlashDbServiceImpl(HBaseUtil hBaseUtil,
+                              RowKeyUtil rowKeyUtil,
+                              SdtService sdtService,
+                              StringRedisTemplate stringRedisTemplate) {
         this.hBaseUtil = hBaseUtil;
         this.rowKeyUtil = rowKeyUtil;
         this.sdtService = sdtService;
+        this.stringRedisTemplate = stringRedisTemplate;
     }
 
     @Override
@@ -56,11 +74,11 @@ public class FlashDbServiceImpl implements FlashDbService {
 
     /**
      * convert tagPointLists to SplitTagPointLists
+     * （将原始数据转换为hbase存储数据）
      *
      * @param tagPointLists
      * @return
      */
-    @Override
     public List<SplitTagPointList> convert2SplitTagPointList(List<TagPointList> tagPointLists) {
 
         if (null != tagPointLists && tagPointLists.size() > 0) {
@@ -136,12 +154,12 @@ public class FlashDbServiceImpl implements FlashDbService {
 
     /**
      * dump data to hbase
+     * ps：将数据存储到hbase，rowkey的粒度tag+1day，其中每个rowkey最多有24个Column（每小时一个），每个column中的数据进行sdt压缩
      *
      * @param dataList
      * @return
      */
-    @Override
-    public int dump2Hbase(@NotNull List<SplitTagPointList> dataList) {
+    private int dump2Hbase(@NotNull List<SplitTagPointList> dataList) {
 
         if (null != dataList && dataList.size() > 0) {
 
@@ -226,6 +244,8 @@ public class FlashDbServiceImpl implements FlashDbService {
                     Integer endDayTimestamp = getDayTimeStamp(endTime);
 
                     List<TagPointList> tagPointLists = new ArrayList<>();
+
+                    // todo: use currnt search to increase performace
                     for (String tag : tagList) {
 
                         byte[] startRowkey = rowKeyUtil.tag2Rowkey(tag, bgDayTimestamp);
@@ -292,6 +312,196 @@ public class FlashDbServiceImpl implements FlashDbService {
         }
 
         return new ArrayList<>();
+    }
+
+    @Override
+    public int createTagList(List<TagInfo> tagInfoList) {
+
+        if (null != tagInfoList && tagInfoList.size() > 0) {
+
+            List<String> keys = tagInfoList.stream().map(tagInfo -> {
+                return TAGINFO_LIST + tagInfo.getTagCode();
+            }).collect(Collectors.toList());
+            Map<String, String> exsitTagMap = redisStringBatchGet(keys);
+            Map<String, String> saveMap = new HashMap<>(keys.size() * 2);
+
+            for (TagInfo tagInfo : tagInfoList) {
+                if (null != tagInfo && null != tagInfo.getTagCode()) {
+                    if (StringUtils.isEmpty(exsitTagMap.get(TAGINFO_LIST + tagInfo.getTagCode()))) {
+                        saveMap.put(TAGINFO_LIST + tagInfo.getTagCode(), JSON.toJSONString(tagInfo));
+                    }
+                }
+            }
+
+            // batch insert data to redis
+            redisStringBatchInsert(saveMap);
+            return saveMap.size();
+
+        }
+
+        return 0;
+    }
+
+    @Override
+    public Long deleteTagList(List<String> tagCodeList) {
+
+        if (null != tagCodeList && tagCodeList.size() > 0) {
+
+            List<String> tagInfoKeys = tagCodeList.stream().map(tagcode -> {
+                return TAGINFO_LIST + tagcode;
+            }).collect(Collectors.toList());
+
+            List<String> tagIndexKeys = tagCodeList.stream().map(tagcode -> {
+                return TAGID_INDEX + tagcode;
+            }).collect(Collectors.toList());
+
+            Map<String, String> tagInfoTagMap = redisStringBatchGet(tagInfoKeys);
+
+            Map<String, String> tagIndexTagMap = redisStringBatchGet(tagIndexKeys);
+
+            List<String> deleteList = new ArrayList<>();
+
+            for (String tagCode : tagCodeList) {
+
+                if (StringUtils.isNotEmpty(tagInfoTagMap.get(TAGINFO_LIST + tagCode))
+                        && StringUtils.isEmpty(tagIndexTagMap.get(TAGID_INDEX + tagCode))) {
+                    // the tag exsist in taginfoRedis but not exsist in indexRedis
+                    deleteList.add(TAGINFO_LIST + tagCode);
+                }
+
+            }
+
+            return this.redisStringBatchDelete(deleteList);
+
+        }
+
+        return 0L;
+    }
+
+    /**
+     * check if all tags have been created in the list
+     *
+     * @param tagCodeSet
+     * @return
+     */
+    @Override
+    public boolean checkTagList(Set<String> tagCodeSet) {
+
+        if (CollectionUtils.isNotEmpty(tagCodeSet)) {
+
+            List<String> keys = tagCodeSet.stream().map(tagCode -> {
+                return TAGINFO_LIST + tagCode;
+            }).collect(Collectors.toList());
+            Map<String, String> exsitTagMap = redisStringBatchGet(keys);
+
+            int exsistSize = 0;
+            for (String value : exsitTagMap.values()) {
+                if (null != value) {
+                    exsistSize++;
+                }
+            }
+
+            if (tagCodeSet.size() == exsistSize) {
+                return true;
+            }
+
+        }
+
+        return false;
+    }
+
+    /**
+     * search tags by regex from flash tsdb
+     *
+     * @param regex
+     * @return
+     */
+    @Override
+    public List<TagInfo> searchTags(String regex) {
+
+        Set<String> keyList = stringRedisTemplate.keys(TAGINFO_LIST + "*" + regex + "*");
+
+        Map<String, String> tagMap = redisStringBatchGet(new ArrayList<>(keyList));
+
+        List<TagInfo> tagInfoList = new ArrayList<>();
+
+        for (String tagInfo : tagMap.values()) {
+            tagInfoList.add(JSON.parseObject(tagInfo, TagInfo.class));
+        }
+
+        return tagInfoList;
+    }
+
+    /**
+     * batch get string data from redis
+     *
+     * @param keyList
+     * @return
+     */
+    private Map<String, String> redisStringBatchGet(List<String> keyList) {
+
+        if (null != keyList && keyList.size() > 0) {
+
+            List<Object> objects = stringRedisTemplate.executePipelined((RedisCallback<String>) redisConnection -> {
+                StringRedisConnection stringRedisConnection = (StringRedisConnection) redisConnection;
+                for (String key : keyList) {
+                    stringRedisConnection.get(key);
+                }
+                return null;
+            });
+
+            List<String> collect = objects.stream().map(val -> String.valueOf(val)).collect(Collectors.toList());
+            Map<String, String> map = new HashMap<>(collect.size() * 2);
+
+            for (int i = 0, size = keyList.size(); i < size; i++) {
+                map.put(keyList.get(i), collect.get(i).equals("null") ? null : collect.get(i));
+            }
+
+            return map;
+
+        }
+
+        return new HashMap<>(0);
+
+    }
+
+    /**
+     * batch delete
+     *
+     * @param keyList
+     * @return
+     */
+    private Long redisStringBatchDelete(List<String> keyList) {
+
+        if (null != keyList && keyList.size() > 0) {
+
+            return stringRedisTemplate.delete(keyList);
+
+        }
+
+        return 0L;
+
+    }
+
+    /**
+     * batch insert string data into redis
+     *
+     * @param saveMap
+     */
+    private void redisStringBatchInsert(Map<String, String> saveMap) {
+
+        stringRedisTemplate.executePipelined(new SessionCallback<Object>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> redisOperations) throws DataAccessException {
+
+                for (Map.Entry<String, String> entry : saveMap.entrySet()) {
+                    stringRedisTemplate.opsForValue().set(entry.getKey(), entry.getValue());
+                }
+
+                return null;
+            }
+        });
+
     }
 
 

@@ -47,6 +47,12 @@
         </dependency>
 
         <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-boot-starter</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-client</artifactId>
             <version>1.4.11</version>
@@ -77,6 +83,7 @@
             <artifactId>fastjson</artifactId>
             <version>1.2.62</version>
         </dependency>
+
 
     </dependencies>
 
