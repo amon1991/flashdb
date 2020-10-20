@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flash TsDB</title>
+    <link rel="stylesheet" href="../layui-2.2.45/css/layui.css" media="all"/>
+    <style>
+        element.style {
+        }
+
+        .header {
+            height: 59px;
+            border-bottom: 1px solid #404553;
+            background-color: #393D49;
+        }
+
+        .logo-font {
+            color: #d2d2d2;
+            font-size: 30px;
+            font-family: Arial;
+        }
+    </style>
+</head>
+<body>
+<div class="layui-header header header-doc" autumn>
+    <div class="layui-main">
+        <div style="padding-top: 12px;"><p class="logo-font">Flash TsDB</p></div>
+    </div>
+</div>
+
+<div class="layui-main" style="margin-top: 20px">
+    <div class="layui-row">
+        <div id="search-tags" class="layui-col-md11">
+            <div class="layui-col-md3">
+                <div class="layui-form-item">
+                    <input type="text" name="title" required lay-verify="required"
+                           placeholder="Maximum return 1000 tags"
+                           autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-col-md9">
+                <button type="button" class="layui-btn">search tags</button>
+            </div>
+        </div>
+        <div id="create-tag" class="layui-col-md1">
+            <button type="button" class="layui-btn">create tag</button>
+        </div>
+    </div>
+    <div id="point-table">
+        <table class="layui-table">
+            <colgroup>
+                <col width="200">
+                <col width="200">
+                <col width="100">
+                <col width="100">
+                <col width="200">
+                <col>
+            </colgroup>
+            <thead>
+            <tr>
+                <th>TagCode</th>
+                <th>Name</th>
+                <th>Accuracy</th>
+                <th>Unit</th>
+                <th>Createtime</th>
+                <th>Description</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>test001</td>
+                <td>testname001</td>
+                <td>0.1</td>
+                <td>ka</td>
+                <td>2020-10-20 15:22:30</td>
+                <td>人生就像是一场修行</td>
+            </tr>
+            <tr>
+                <td>test002</td>
+                <td>testname002</td>
+                <td>0.1</td>
+                <td>ka</td>
+                <td>2020-10-20 15:22:30</td>
+                <td>人生就像是一场修行</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
