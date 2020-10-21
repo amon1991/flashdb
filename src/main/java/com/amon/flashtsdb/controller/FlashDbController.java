@@ -30,6 +30,7 @@ public class FlashDbController {
     private static final String SUCCESS = "success";
     private static final String MSG = "msg";
     private static final String DATA = "data";
+    private static final int DEFAULT_TAGS_LIMIT = 1000;
 
     private final FlashDbService flashDbService;
 
@@ -84,7 +85,7 @@ public class FlashDbController {
         ModelMap modelMap = new ModelMap();
         modelMap.put(SUCCESS, true);
         modelMap.put(MSG, "get tags successfully");
-        modelMap.put(DATA, flashDbService.searchTags(""));
+        modelMap.put(DATA, flashDbService.searchTags("",DEFAULT_TAGS_LIMIT));
         return modelMap;
 
     }
@@ -97,7 +98,7 @@ public class FlashDbController {
         ModelMap modelMap = new ModelMap();
         modelMap.put(SUCCESS, true);
         modelMap.put(MSG, "get tags successfully");
-        modelMap.put(DATA, flashDbService.searchTags(regex));
+        modelMap.put(DATA, flashDbService.searchTags(regex,DEFAULT_TAGS_LIMIT));
         return modelMap;
 
     }

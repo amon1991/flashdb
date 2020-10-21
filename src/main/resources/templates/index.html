@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Flash TsDB</title>
     <link rel="stylesheet" href="../layui-2.2.45/css/layui.css" media="all"/>
+
     <style>
         element.style {
         }
@@ -20,6 +21,8 @@
             font-family: Arial;
         }
     </style>
+    <script type="text/javascript" src="../layui-2.2.45/jquery-1.12.4.js"></script>
+    <script type="text/javascript" src="../layui-2.2.45/layui.js"></script>
 </head>
 <body>
 <div class="layui-header header header-doc" autumn>
@@ -35,24 +38,26 @@
                 <div class="layui-form-item">
                     <input type="text" name="title" required lay-verify="required"
                            placeholder="Maximum return 1000 tags"
-                           autocomplete="off" class="layui-input">
+                           autocomplete="off" class="layui-input"
+                           id="search-input">
                 </div>
             </div>
             <div class="layui-col-md9">
-                <button type="button" class="layui-btn">search tags</button>
+                <button type="button" class="layui-btn" onclick="searchtags();">search tags</button>
             </div>
         </div>
         <div id="create-tag" class="layui-col-md1">
-            <button type="button" class="layui-btn">create tag</button>
+            <button type="button" class="layui-btn" onclick="createtag();">create tag</button>
         </div>
     </div>
-    <div id="point-table">
+    <div id="search-result">
         <table class="layui-table">
             <colgroup>
                 <col width="200">
                 <col width="200">
                 <col width="100">
                 <col width="100">
+                <col width="200">
                 <col width="200">
                 <col>
             </colgroup>
@@ -64,28 +69,209 @@
                 <th>Unit</th>
                 <th>Createtime</th>
                 <th>Description</th>
+                <th>Operation</th>
             </tr>
             </thead>
             <tbody>
-            <tr>
-                <td>test001</td>
-                <td>testname001</td>
-                <td>0.1</td>
-                <td>ka</td>
-                <td>2020-10-20 15:22:30</td>
-                <td>人生就像是一场修行</td>
-            </tr>
-            <tr>
-                <td>test002</td>
-                <td>testname002</td>
-                <td>0.1</td>
-                <td>ka</td>
-                <td>2020-10-20 15:22:30</td>
-                <td>人生就像是一场修行</td>
-            </tr>
             </tbody>
         </table>
     </div>
 </div>
+
+<script type="text/javascript">
+
+    var layer;
+    layui.use('layer', function () {
+        layer = layui.layer;
+    });
+
+    // for search tags btn
+    function searchtags() {
+
+        var search_context = $("#search-input");
+
+        var search_url = "/apis/flashtsdb/tags/" + search_context.val();
+        if (search_context.val() == "" || search_context.val() == null || search_context.val() == undefined) {
+            search_url = "/apis/flashtsdb/tags";
+        }
+
+        $.ajax({
+            url: search_url, success: function (result) {
+                if (result.success == true) {
+
+                    var search_result_table = '<table class="layui-table">\n' +
+                        '            <colgroup>\n' +
+                        '                <col width="200">\n' +
+                        '                <col width="200">\n' +
+                        '                <col width="100">\n' +
+                        '                <col width="100">\n' +
+                        '                <col width="200">\n' +
+                        '                <col width="200">\n' +
+                        '                <col>\n' +
+                        '            </colgroup>\n' +
+                        '            <thead>\n' +
+                        '            <tr>\n' +
+                        '                <th>TagCode</th>\n' +
+                        '                <th>Name</th>\n' +
+                        '                <th>Accuracy</th>\n' +
+                        '                <th>Unit</th>\n' +
+                        '                <th>Createtime</th>\n' +
+                        '                <th>Description</th>\n' +
+                        '                <th>Operation</th>\n' +
+                        '            </tr>\n' +
+                        '            </thead>\n' +
+                        '            <tbody>';
+
+                    var list = result.data;
+                    for (var i in list) {
+                        search_result_table += '<tr><td>' + list[i].tagCode + '</td>' +
+                            '<td>' + list[i].tagName + '</td>' +
+                            '<td>' + list[i].accuracyE + '</td>' +
+                            '<td>' + list[i].tagUnit + '</td>' +
+                            '<td>' + timestampToTime(list[i].createtime) + '</td>' +
+                            '<td>' + list[i].tagDescription + '</td>' +
+                            '<td><button type="button" class="layui-btn layui-btn-sm">search points</button></td></tr>';
+                    }
+
+                    search_result_table += '</tbody>\n' +
+                        '        </table>';
+
+                    $("#search-result").html(search_result_table);
+
+                } else {
+                    alert(result.msg);
+                }
+
+            }
+        });
+
+    }
+
+    function timestampToTime(timestamp) {
+        var date = new Date(timestamp);
+        var Y = date.getFullYear() + '-';
+        var M = (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-';
+        var D = date.getDate() + ' ';
+        var h = date.getHours() + ':';
+        var m = date.getMinutes() + ':';
+        var s = date.getSeconds();
+        return Y + M + D + h + m + s;
+    }
+
+    // for create tag btn
+    function createtag() {
+
+        // reset form data
+        document.getElementById("create-tag-form").reset();
+
+        layer.open({
+            type: 1,
+            title: ['Create New Tag'],
+            area: '800px',
+            content: $('#create-tag-context')
+        });
+
+    }
+
+
+</script>
 </body>
+
+<div id="create-tag-context" style="display: none">
+
+    <form class="layui-form" id="create-tag-form" action="">
+
+        <div class="layui-form-item" style="margin-top: 20px;">
+            <label class="layui-form-label">tag code</label>
+            <div class="layui-input-inline">
+                <input type="text" name="tagCode" maxlength="200" required lay-verify="required"
+                       placeholder="pleae input tag code" autocomplete="off" class="layui-input">
+            </div>
+            <div class="layui-form-mid layui-word-aux">limit 200 characters</div>
+        </div>
+
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">name</label>
+            <div class="layui-input-inline">
+                <input type="text" name="tagName" maxlength="200" required lay-verify="required"
+                       placeholder="pleae input tag name" autocomplete="off" class="layui-input">
+            </div>
+            <div class="layui-form-mid layui-word-aux">limit 200 characters</div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">accuracy</label>
+            <div class="layui-input-inline">
+                <input type="text" name="accuracyE" required lay-verify="required" placeholder="pleae input accuracy"
+                       autocomplete="off" class="layui-input">
+            </div>
+            <div class="layui-form-mid layui-word-aux">decimals,from 0 to 1</div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">unit</label>
+            <div class="layui-input-inline">
+                <input type="text" name="tagUnit" maxlength="50" placeholder="pleae input unit" autocomplete="off"
+                       class="layui-input">
+            </div>
+            <div class="layui-form-mid layui-word-aux">limit 50 characters</div>
+        </div>
+
+
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">description</label>
+            <div class="layui-input-block">
+                <textarea name="tagDescription" maxlength="1000" placeholder="pleae input tag description"
+                          class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="create-tag-form">submit</button>
+                <button type="reset" class="layui-btn layui-btn-primary">reset</button>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+<script>
+    layui.use('form', function () {
+        var form = layui.form;
+
+        //listen for submit
+        form.on('submit(create-tag-form)', function (data) {
+
+            var datas = [];
+            datas.push(data.field);
+
+            //layer.msg(JSON.stringify(datas));
+
+            // do create tag request
+            $.ajax({
+                url: "/apis/flashtsdb/tags",
+                type: "POST",
+                data: JSON.stringify(datas),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (result) {
+                    if (result.success == true) {
+
+                        layer.msg(result.msg);
+                        layer.closeAll('page');
+
+                    } else {
+                        layer.msg(result.msg);
+                    }
+
+                }
+            });
+
+            return false;
+        });
+
+    });
+</script>
+
 </html>

@@ -18,13 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.StringRedisConnection;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.data.redis.core.SessionCallback;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.stereotype.Service;
 
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -414,12 +413,29 @@ public class FlashDbServiceImpl implements FlashDbService {
      * search tags by regex from flash tsdb
      *
      * @param regex
+     * @param limit
      * @return
      */
     @Override
-    public List<TagInfo> searchTags(String regex) {
+    public List<TagInfo> searchTags(String regex, int limit) {
 
-        Set<String> keyList = stringRedisTemplate.keys(TAGINFO_LIST + "*" + regex + "*");
+        //Set<String> keyList = stringRedisTemplate.keys(TAGINFO_LIST + "*" + regex + "*");
+
+        Set<String> keyList = new HashSet<>(16 * 16);
+
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(TAGINFO_LIST + "*" + regex + "*").count(limit).build();
+        RedisSerializer<String> redisSerializer = (RedisSerializer<String>) stringRedisTemplate.getKeySerializer();
+        Cursor<String> cursor = (Cursor) stringRedisTemplate.executeWithStickyConnection((RedisCallback) redisConnection ->
+                new ConvertingCursor<>(redisConnection.scan(scanOptions), redisSerializer::deserialize));
+        while (cursor.hasNext() && limit>keyList.size()) {
+            keyList.add(cursor.next());
+        }
+
+        try {
+            cursor.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         Map<String, String> tagMap = redisStringBatchGet(new ArrayList<>(keyList));
 

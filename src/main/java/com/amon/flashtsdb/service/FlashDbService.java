@@ -63,7 +63,7 @@ public interface FlashDbService {
      * @param regex
      * @return
      */
-    List<TagInfo> searchTags(String regex);
+    List<TagInfo> searchTags(String regex, int limit);
 
 
 }

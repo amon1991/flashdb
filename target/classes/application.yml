@@ -22,7 +22,7 @@ spring:
       content-type: text/html
     enabled: true
     encoding: utf-8
-    mode: LEGACYHTML5
+    mode: HTML
     prefix: classpath:/templates/
     suffix: .html
   redis:

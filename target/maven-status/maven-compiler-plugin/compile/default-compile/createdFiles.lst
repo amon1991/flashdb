@@ -13,6 +13,7 @@ com\amon\flashtsdb\FlashtsdbApplication.class
 com\amon\flashtsdb\entity\TagInfo.class
 com\amon\flashtsdb\entity\SplitTagPointList.class
 com\amon\flashtsdb\controller\FlashDbController.class
+com\amon\flashtsdb\controller\WebController.class
 com\amon\flashtsdb\Swagger3Config.class
 com\amon\flashtsdb\entity\FlashCell.class
 com\amon\flashtsdb\sdt\SdtPoints.class
