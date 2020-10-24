@@ -33,6 +33,19 @@ public class PointsSearchRequest {
      */
     private Integer searchInterval;
 
+    /**
+     * if limit > 0 and searchMode is interpolated,the searchInterval will be auto-calculated by time range and limit num
+     */
+    private int limit = -1;
+
+    public int getLimit() {
+        return limit;
+    }
+
+    public void setLimit(int limit) {
+        this.limit = limit;
+    }
+
     public List<String> getTagList() {
         return tagList;
     }

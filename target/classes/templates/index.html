@@ -23,6 +23,7 @@
     </style>
     <script type="text/javascript" src="../layui-2.2.45/jquery-1.12.4.js"></script>
     <script type="text/javascript" src="../layui-2.2.45/layui.js"></script>
+    <script type="text/javascript" src="../layui-2.2.45/echarts.min.js"></script>
 </head>
 <body>
 <div class="layui-header header header-doc" autumn>
@@ -42,7 +43,7 @@
                            id="search-input">
                 </div>
             </div>
-            <div class="layui-col-md9">
+            <div class="layui-col-md9" style="padding-left: 20px;">
                 <button type="button" class="layui-btn" onclick="searchtags();">search tags</button>
             </div>
         </div>
@@ -130,7 +131,8 @@
                             '<td>' + list[i].tagUnit + '</td>' +
                             '<td>' + timestampToTime(list[i].createtime) + '</td>' +
                             '<td>' + list[i].tagDescription + '</td>' +
-                            '<td><button type="button" class="layui-btn layui-btn-sm">search points</button></td></tr>';
+                            '<td><button type="button" onclick="search_points_btn(\'' + list[i].tagCode + '\');" ' +
+                            'class="layui-btn layui-btn-sm">search points</button></td></tr>';
                     }
 
                     search_result_table += '</tbody>\n' +
@@ -171,6 +173,144 @@
             content: $('#create-tag-context')
         });
 
+    }
+
+    // for search points btn
+    function search_points_btn(tagcode) {
+
+        // reset data
+        $('#data-tag-code').val(tagcode);
+        var endTime = Date.parse(new Date());
+        var bgTime = endTime - 3600 * 4 * 1000;
+        var defaultTimeRange = timestampToTime(bgTime) + " - " + timestampToTime(endTime);
+        $('#data-range').val(defaultTimeRange);
+
+        // do default search
+        searchpoints();
+
+        layer.open({
+            type: 1,
+            title: ['Search Tag Points'],
+            area: ['1000px', '800px'],
+            content: $('#tag-points-context')
+        });
+
+    }
+
+    function searchpoints() {
+
+        var tagcode = $("#data-tag-code").val();
+        var timerange = $("#data-range").val();
+        var searchMode = $("#search-type").val();
+
+        if (timerange == "" || timerange == null || timerange == undefined) {
+            layer.msg("time range can't be empty.");
+        }
+
+        // split timerange to bgTime and endTime
+        var timeArr = timerange.split(" - ");
+        var bgTime = timeArr[0];
+        var endTime = timeArr[1];
+
+        var jsonObject = {};
+        jsonObject.searchMode = searchMode;
+        var tagCodeArray = [];
+        tagCodeArray.push(tagcode);
+        jsonObject.tagList = tagCodeArray;
+        jsonObject.bgTime = new Date(bgTime).getTime();
+        jsonObject.endTime = new Date(endTime).getTime();
+        jsonObject.limit = 1000;
+        jsonObject.searchInterval = 0;
+
+        // do post
+        $.ajax({
+            url: "/apis/flashtsdb/points/historcal",
+            type: "POST",
+            data: JSON.stringify(jsonObject),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (result) {
+                if (result.success == true) {
+
+                    var list = result.data;
+
+                    if (list.length > 0) {
+
+                        var pointList = list[0].pointList;
+
+                        var pointdata = [];
+
+                        for (var i in pointList) {
+
+                            pointdata.push(generateTimeData(pointList[i]));
+
+                        }
+
+                        var myChart = echarts.init(document.getElementById('historical-chart'));
+
+                        // Specifies the configuration items and data for the diagram
+                        option = {
+                            tooltip: {
+                                trigger: 'axis',
+                                formatter: function (params) {
+                                    return timestampToTime(params[0].data[0])+" / "+params[0].data[1];
+                                },
+                                axisPointer: {
+                                    animation: false
+                                }
+                            },
+                            xAxis: {
+                                type: 'time',
+                                splitLine: {
+                                    show: false
+                                }
+                            },
+                            yAxis: {
+                                type: 'value',
+                                boundaryGap: [0, '100%'],
+                                splitLine: {
+                                    show: false
+                                }
+                            },
+                            series: [{
+                                type: 'line',
+                                showSymbol: false,
+                                hoverAnimation: false,
+                                data: pointdata
+                            }]
+                        };
+
+
+                        // Displays the chart using the configuration items and data you just specified
+                        myChart.setOption(option);
+
+                    }
+
+                } else {
+
+                    layer.msg(result.msg);
+
+                }
+
+            }
+        });
+
+    }
+
+    function generateData(obj) {
+        var now = new Date(obj.x);
+        return {
+            name: now.toString(),
+            value: [
+                [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('/'),
+                obj.y
+            ]
+        };
+    }
+
+    function generateTimeData(obj) {
+        //var now = new Date(obj.x);
+        return [obj.x, obj.y];
     }
 
 
@@ -236,6 +376,81 @@
 
 </div>
 
+<div id="tag-points-context" style="display: none">
+
+    <blockquote class="layui-elem-quote">
+        Real-Time Data
+    </blockquote>
+
+    <div id="real-time">
+
+        <div class="layui-row" style="margin-top: 20px;padding-left: 20px;">
+            <div class="layui-col-md3">
+                Measured Value - todo
+            </div>
+            <div class="layui-col-md3">
+                Measured Time - todo
+            </div>
+            <div class="layui-col-md6">
+            </div>
+        </div>
+        <div class="layui-row" style="margin-top: 20px;margin-bottom:20px;padding-left: 20px;">
+            <div class="layui-col-md3">
+                28.3
+            </div>
+            <div class="layui-col-md3">
+                2020-10-22 10:23:56
+            </div>
+            <div class="layui-col-md6">
+            </div>
+        </div>
+
+    </div>
+
+    <blockquote class="layui-elem-quote">
+        Historical Data Query
+    </blockquote>
+
+    <div id="historical-time">
+
+        <div class="layui-row" style="margin-top: 20px;padding-left: 20px;">
+            <div class="layui-col-md12">
+                Time Range
+                <input type="text" id="data-tag-code" readonly style="display: none;">
+            </div>
+        </div>
+        <div class="layui-row" style="margin-top: 20px;padding-left: 20px;">
+            <div class="layui-col-md4">
+                <input type="text" name="title" class="layui-input" id="data-range" readonly>
+            </div>
+            <div class="layui-col-md3">
+                <div class="layui-form layui-form-item">
+                    <div style="padding-left: 20px;">
+                        <select lay-verify="required" id="search-type">
+                            <option value="0" selected>Raw Data</option>
+                            <option value="1">Interpolated Data</option>
+                        </select>
+
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md5" style="padding-left: 20px;">
+                <button type="button" class="layui-btn" onclick="searchpoints();">search</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="historical-chart" style="width: 950px;height:450px;padding-left: 20px;">
+    </div>
+
+    <script type="text/javascript">
+
+    </script>
+
+</div>
+
 <script>
     layui.use('form', function () {
         var form = layui.form;
@@ -245,8 +460,6 @@
 
             var datas = [];
             datas.push(data.field);
-
-            //layer.msg(JSON.stringify(datas));
 
             // do create tag request
             $.ajax({
@@ -272,6 +485,16 @@
         });
 
     });
+
+    layui.use('laydate', function () {
+        var laydate = layui.laydate;
+        laydate.render({
+            elem: '#data-range',
+            type: 'datetime',
+            range: true
+        });
+    });
+
 </script>
 
 </html>

@@ -85,7 +85,7 @@ public class FlashDbController {
         ModelMap modelMap = new ModelMap();
         modelMap.put(SUCCESS, true);
         modelMap.put(MSG, "get tags successfully");
-        modelMap.put(DATA, flashDbService.searchTags("",DEFAULT_TAGS_LIMIT));
+        modelMap.put(DATA, flashDbService.searchTags("", DEFAULT_TAGS_LIMIT));
         return modelMap;
 
     }
@@ -98,7 +98,7 @@ public class FlashDbController {
         ModelMap modelMap = new ModelMap();
         modelMap.put(SUCCESS, true);
         modelMap.put(MSG, "get tags successfully");
-        modelMap.put(DATA, flashDbService.searchTags(regex,DEFAULT_TAGS_LIMIT));
+        modelMap.put(DATA, flashDbService.searchTags(regex, DEFAULT_TAGS_LIMIT));
         return modelMap;
 
     }
@@ -148,6 +148,7 @@ public class FlashDbController {
     @ResponseBody
     public ModelMap historcalData(@RequestBody PointsSearchRequest pointsSearchRequest) {
 
+        // todo, should think about limit parameter
         ModelMap modelMap = new ModelMap();
 
         Set<String> tagCodeSet = new HashSet<>(pointsSearchRequest.getTagList());
