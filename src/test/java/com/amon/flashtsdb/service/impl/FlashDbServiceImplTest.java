@@ -146,12 +146,21 @@ public class FlashDbServiceImplTest {
 
         long bgTime = pointList.get(0).getX();
         long endTime = pointList.get(pointList.size() - 1).getX();
+        List<String> tagList = Arrays.asList(tag);
 
+        searchPoints(bgTime, endTime, tagList);
+
+    }
+
+    private void searchPoints(long bgTime, long endTime, List<String> tagList) {
+
+        List<TagPointList> tagPointLists;
         PointsSearchRequest pointsSearchRequest = new PointsSearchRequest();
         pointsSearchRequest.setBgTime(bgTime);
         pointsSearchRequest.setEndTime(endTime);
         pointsSearchRequest.setSearchInterval(60);
-        pointsSearchRequest.setTagList(Arrays.asList(tag));
+        pointsSearchRequest.setTagList(tagList);
+        pointsSearchRequest.setLimit(1000);
         pointsSearchRequest.setSearchMode(PointsSearchMode.INTERPOLATED.getMode());
 
 

@@ -5,14 +5,12 @@ import com.amon.flashtsdb.entity.*;
 import com.amon.flashtsdb.hbase.HBaseUtil;
 import com.amon.flashtsdb.hbase.RowKeyUtil;
 import com.amon.flashtsdb.sdt.Point;
-import com.amon.flashtsdb.sdt.SdtPeriod;
-import com.amon.flashtsdb.sdt.SdtPoints;
 import com.amon.flashtsdb.sdt.SdtService;
 import com.amon.flashtsdb.service.FlashDbService;
+import com.amon.flashtsdb.threadpool.PointsHistorcalSearchPoolExecutor;
+import com.amon.flashtsdb.threadpool.pointshistorcalsearch.SearchTask;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +24,7 @@ import org.springframework.stereotype.Service;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 import static com.amon.flashtsdb.hbase.RowKeyUtil.TAGID_INDEX;
@@ -269,141 +268,30 @@ public class FlashDbServiceImpl implements FlashDbService {
 
                     Map<String, HourRange> searchScopeMap = new HashMap<>(16);
 
-                    if (bgDayTimestamp.intValue() == endDayTimestamp.intValue()) {
+                    getSearchScopeMap(bgTime, endTime, bgDayTimestamp, endDayTimestamp, searchScopeMap);
 
-                        HourRange hourRange = new HourRange();
-                        hourRange.setBgHour(getHourQualifier(bgTime));
-                        hourRange.setEndHour(getHourQualifier(endTime));
-
-                        // sameday
-                        searchScopeMap.put(bgDayTimestamp + "", hourRange);
-
-                    } else {
-                        // different day
-                        for (int i = bgDayTimestamp; i <= endDayTimestamp; i++) {
-
-                            HourRange hourRange = new HourRange();
-                            if (i == bgDayTimestamp) {
-                                hourRange.setBgHour(getHourQualifier(bgTime));
-                                hourRange.setEndHour(23);
-                            } else if (i == endDayTimestamp) {
-                                hourRange.setBgHour(0);
-                                hourRange.setEndHour(getHourQualifier(endTime));
-                            } else {
-                                hourRange.setBgHour(0);
-                                hourRange.setEndHour(23);
-                            }
-                            searchScopeMap.put(i + "", hourRange);
-
-                        }
-
-                    }
-
+                    // use CountDownLatch to search data in concurrency way
+                    CountDownLatch cdl = new CountDownLatch(tagList.size());
 
                     List<TagPointList> tagPointLists = new ArrayList<>();
-
-                    // todo: use currnt search to increase performace
                     for (String tag : tagList) {
-
-                        if (endDayTimestamp > bgDayTimestamp) {
-                            // hbase scan will not include endDayTimestamp,so the endday should add one
-                            endDayTimestamp++;
-                        }
-
-                        byte[] startRowkey = rowKeyUtil.tag2Rowkey(tag, bgDayTimestamp);
-                        byte[] endRowkey = rowKeyUtil.tag2Rowkey(tag, endDayTimestamp);
 
                         TagPointList tagPointList = new TagPointList();
                         tagPointLists.add(tagPointList);
                         tagPointList.setTag(tag);
 
-                        List<SdtPeriod> mergedSdtPeriodList = new ArrayList<>();
-
-                        try {
-
-                            ResultScanner resultScanner = hBaseUtil.scanByStartAndStopRowKey(hbaseTableName, startRowkey, endRowkey);
-
-                            Iterator<Result> iterator = resultScanner.iterator();
-
-                            SdtPeriod lastSdtPeriod = null;
-                            while (iterator.hasNext()) {
-
-                                Result myresult = iterator.next();
-                                FlashRowkey flashRowkey = rowKeyUtil.rowkey2FlashRowkey(myresult.getRow());
-                                int dayTime = flashRowkey.getTimestamp();
-                                HourRange hourRange = searchScopeMap.get(dayTime + "");
-                                for (int i = 0; i < DAY_HOURS; i++) {
-                                    if (null != hourRange && hourRange.getBgHour() <= i && i <= hourRange.getEndHour()) {
-                                        List<SdtPeriod> sdtPeriodList = JSON.parseArray(hBaseUtil.getValueByResult(myresult,
-                                                defaultColumnFamily, i + ""), SdtPeriod.class);
-                                        if (null != sdtPeriodList && sdtPeriodList.size() > 0) {
-                                            if (lastSdtPeriod != null) {
-                                                // add std period by lastSdtPeriod and this hour's first stdPeriod
-                                                SdtPoints sdtPoints = new SdtPoints();
-                                                Point beginPoint = new Point();
-                                                beginPoint.setX(lastSdtPeriod.getEndTime());
-                                                beginPoint.setY(lastSdtPeriod.getEndValue());
-                                                Point lastPoint = new Point();
-                                                lastPoint.setX(sdtPeriodList.get(0).getBgTime());
-                                                lastPoint.setY(sdtPeriodList.get(0).getBgValue());
-                                                sdtPoints.setBeginPoint(beginPoint);
-                                                sdtPoints.setLastPoint(lastPoint);
-                                                // add std period
-                                                mergedSdtPeriodList.add(sdtService.structSdtPeriod(sdtPoints));
-                                            }
-                                            mergedSdtPeriodList.addAll(sdtPeriodList);
-                                            // set last period
-                                            lastSdtPeriod = sdtPeriodList.get(sdtPeriodList.size() - 1);
-                                        }
-                                    }
-                                }
-
-                            }
-
-                            // uncompress point data
-                            if (searchMode.intValue() == PointsSearchMode.INTERPOLATED.getMode().intValue()) {
-                                tagPointList.setPointList(sdtService.sdtUnCompress(mergedSdtPeriodList, bgTime, endTime, searchInterval.longValue() * 1000L));
-                            } else if (searchMode.intValue() == PointsSearchMode.RAW.getMode().intValue()) {
-
-                                List<Point> pointList = new ArrayList<>();
-                                tagPointList.setPointList(pointList);
-
-                                if (null != mergedSdtPeriodList && mergedSdtPeriodList.size() > 0) {
-
-                                    int currentNum = 0;
-
-                                    for (SdtPeriod sdtPeriod : mergedSdtPeriodList) {
-
-                                        if (sdtPeriod.getBgTime() >= bgTime && sdtPeriod.getBgTime() <= endTime) {
-
-                                            Point bgPoint = new Point();
-                                            bgPoint.setX(sdtPeriod.getBgTime());
-                                            bgPoint.setY(sdtPeriod.getBgValue());
-
-                                            if (limited) {
-                                                if (limit > currentNum++) {
-                                                    pointList.add(bgPoint);
-                                                } else {
-                                                    break;
-                                                }
-                                            } else {
-                                                pointList.add(bgPoint);
-                                            }
-
-                                        }
-
-                                    }
-
-                                }
-
-                            }
-
-                        } catch (Exception e) {
-                            logger.error("Hbase scan data error:{}", e.getMessage(), e);
-                            e.printStackTrace();
-                        }
+                        PointsHistorcalSearchPoolExecutor.getExecutorService().submit(new SearchTask(cdl, searchMode,
+                                bgTime, endTime, searchInterval, limit, limited, bgDayTimestamp, endDayTimestamp,
+                                searchScopeMap, tagPointList, tag, hBaseUtil, rowKeyUtil, sdtService, hbaseTableName));
 
                     }
+
+                    try {
+                        cdl.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
                     return tagPointLists;
 
                 }
@@ -414,6 +302,38 @@ public class FlashDbServiceImpl implements FlashDbService {
         }
 
         return new ArrayList<>();
+    }
+
+    private void getSearchScopeMap(long bgTime, long endTime, Integer bgDayTimestamp, Integer endDayTimestamp, Map<String, HourRange> searchScopeMap) {
+        if (bgDayTimestamp.intValue() == endDayTimestamp.intValue()) {
+
+            HourRange hourRange = new HourRange();
+            hourRange.setBgHour(getHourQualifier(bgTime));
+            hourRange.setEndHour(getHourQualifier(endTime));
+
+            // sameday
+            searchScopeMap.put(bgDayTimestamp + "", hourRange);
+
+        } else {
+            // different day
+            for (int i = bgDayTimestamp; i <= endDayTimestamp; i++) {
+
+                HourRange hourRange = new HourRange();
+                if (i == bgDayTimestamp) {
+                    hourRange.setBgHour(getHourQualifier(bgTime));
+                    hourRange.setEndHour(23);
+                } else if (i == endDayTimestamp) {
+                    hourRange.setBgHour(0);
+                    hourRange.setEndHour(getHourQualifier(endTime));
+                } else {
+                    hourRange.setBgHour(0);
+                    hourRange.setEndHour(23);
+                }
+                searchScopeMap.put(i + "", hourRange);
+
+            }
+
+        }
     }
 
     @Override
