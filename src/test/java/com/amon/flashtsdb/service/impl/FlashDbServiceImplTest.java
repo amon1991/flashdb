@@ -97,7 +97,7 @@ public class FlashDbServiceImplTest {
 
         List<Point> pointList = new ArrayList<>();
 
-        long bgTimeStamp = 1546272000000L;
+        long bgTimeStamp = 1572134400000L;
         long currentTimeStamp = System.currentTimeMillis();
 
         Random random = new Random();

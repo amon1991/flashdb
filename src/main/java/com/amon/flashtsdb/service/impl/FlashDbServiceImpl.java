@@ -85,6 +85,17 @@ public class FlashDbServiceImpl implements FlashDbService {
 
             List<SplitTagPointList> splitTagPointLists = new ArrayList<>();
 
+            Set<String> tagSet = tagPointLists.stream().map(p -> TAGINFO_LIST + p.getTag()).collect(Collectors.toSet());
+
+            Map<String, String> tagMap = redisStringBatchGet(new ArrayList<>(tagSet));
+            Map<String, TagInfo> tagInfoMap = new HashMap<>();
+            for (String tagInfoStr : tagMap.values()) {
+                if (null != tagInfoStr) {
+                    TagInfo tagInfo = JSON.parseObject(tagInfoStr, TagInfo.class);
+                    tagInfoMap.put(tagInfo.getTagCode(), tagInfo);
+                }
+            }
+
             for (TagPointList tagPointList : tagPointLists) {
 
                 String tag = tagPointList.getTag();
@@ -100,8 +111,11 @@ public class FlashDbServiceImpl implements FlashDbService {
                 List<DayData> dayDataList = new ArrayList<>();
                 splitTagPointList.setDayDataList(dayDataList);
 
-                // todo: get accuracyE in redis
-                splitTagPointList.setAccuracyE(defaultAccuracy);
+                if (tagInfoMap.containsKey(tag)) {
+                    splitTagPointList.setAccuracyE(tagInfoMap.get(tag).getAccuracyE());
+                } else {
+                    splitTagPointList.setAccuracyE(defaultAccuracy);
+                }
 
                 int startDayTimestamp = 0;
                 int startHourQualifier = -1;
