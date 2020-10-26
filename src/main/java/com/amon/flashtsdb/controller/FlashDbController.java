@@ -148,7 +148,6 @@ public class FlashDbController {
     @ResponseBody
     public ModelMap historcalData(@RequestBody PointsSearchRequest pointsSearchRequest) {
 
-        // todo, should think about limit parameter
         ModelMap modelMap = new ModelMap();
 
         Set<String> tagCodeSet = new HashSet<>(pointsSearchRequest.getTagList());
@@ -163,7 +162,7 @@ public class FlashDbController {
             modelMap.put(SUCCESS, false);
             modelMap.put(MSG, "endtime should larger than bgtime");
 
-        } else if (pointsSearchRequest.getSearchInterval() <= 0 &&
+        } else if (pointsSearchRequest.getLimit() == -1 && pointsSearchRequest.getSearchInterval() <= 0 &&
                 pointsSearchRequest.getSearchMode().intValue() == PointsSearchMode.INTERPOLATED.getMode()) {
 
             modelMap.put(SUCCESS, false);

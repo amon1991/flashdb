@@ -6,6 +6,7 @@ import com.amon.flashtsdb.hbase.HBaseUtil;
 import com.amon.flashtsdb.hbase.RowKeyUtil;
 import com.amon.flashtsdb.sdt.Point;
 import com.amon.flashtsdb.sdt.SdtPeriod;
+import com.amon.flashtsdb.sdt.SdtPoints;
 import com.amon.flashtsdb.sdt.SdtService;
 import com.amon.flashtsdb.service.FlashDbService;
 import org.apache.commons.collections.CollectionUtils;
@@ -239,13 +240,61 @@ public class FlashDbServiceImpl implements FlashDbService {
 
                 if (endTime >= bgTime) {
 
+                    int limit = pointsSearchRequest.getLimit();
+                    boolean limited = false;
+                    if (limit > 0) {
+                        limited = true;
+                        if (pointsSearchRequest.getSearchMode().intValue() == PointsSearchMode.INTERPOLATED.getMode()) {
+                            // calculate interval by bgtime\endtime\limit
+                            searchInterval = Math.toIntExact((endTime - bgTime) / (limit * 1000L)) + 1;
+                        }
+                    }
+
                     Integer bgDayTimestamp = getDayTimeStamp(bgTime);
                     Integer endDayTimestamp = getDayTimeStamp(endTime);
+
+                    Map<String, HourRange> searchScopeMap = new HashMap<>(16);
+
+                    if (bgDayTimestamp.intValue() == endDayTimestamp.intValue()) {
+
+                        HourRange hourRange = new HourRange();
+                        hourRange.setBgHour(getHourQualifier(bgTime));
+                        hourRange.setEndHour(getHourQualifier(endTime));
+
+                        // sameday
+                        searchScopeMap.put(bgDayTimestamp + "", hourRange);
+
+                    } else {
+                        // different day
+                        for (int i = bgDayTimestamp; i <= endDayTimestamp; i++) {
+
+                            HourRange hourRange = new HourRange();
+                            if (i == bgDayTimestamp) {
+                                hourRange.setBgHour(getHourQualifier(bgTime));
+                                hourRange.setEndHour(23);
+                            } else if (i == endDayTimestamp) {
+                                hourRange.setBgHour(0);
+                                hourRange.setEndHour(getHourQualifier(endTime));
+                            } else {
+                                hourRange.setBgHour(0);
+                                hourRange.setEndHour(23);
+                            }
+                            searchScopeMap.put(i + "", hourRange);
+
+                        }
+
+                    }
+
 
                     List<TagPointList> tagPointLists = new ArrayList<>();
 
                     // todo: use currnt search to increase performace
                     for (String tag : tagList) {
+
+                        if (endDayTimestamp > bgDayTimestamp) {
+                            // hbase scan will not include endDayTimestamp,so the endday should add one
+                            endDayTimestamp++;
+                        }
 
                         byte[] startRowkey = rowKeyUtil.tag2Rowkey(tag, bgDayTimestamp);
                         byte[] endRowkey = rowKeyUtil.tag2Rowkey(tag, endDayTimestamp);
@@ -257,16 +306,41 @@ public class FlashDbServiceImpl implements FlashDbService {
                         List<SdtPeriod> mergedSdtPeriodList = new ArrayList<>();
 
                         try {
+
                             ResultScanner resultScanner = hBaseUtil.scanByStartAndStopRowKey(hbaseTableName, startRowkey, endRowkey);
 
                             Iterator<Result> iterator = resultScanner.iterator();
+
+                            SdtPeriod lastSdtPeriod = null;
                             while (iterator.hasNext()) {
 
                                 Result myresult = iterator.next();
+                                FlashRowkey flashRowkey = rowKeyUtil.rowkey2FlashRowkey(myresult.getRow());
+                                int dayTime = flashRowkey.getTimestamp();
+                                HourRange hourRange = searchScopeMap.get(dayTime + "");
                                 for (int i = 0; i < DAY_HOURS; i++) {
-                                    List<SdtPeriod> sdtPeriodList = JSON.parseArray(hBaseUtil.getValueByResult(myresult, defaultColumnFamily, i + ""), SdtPeriod.class);
-                                    if (null != sdtPeriodList && sdtPeriodList.size() > 0) {
-                                        mergedSdtPeriodList.addAll(sdtPeriodList);
+                                    if (null != hourRange && hourRange.getBgHour() <= i && i <= hourRange.getEndHour()) {
+                                        List<SdtPeriod> sdtPeriodList = JSON.parseArray(hBaseUtil.getValueByResult(myresult,
+                                                defaultColumnFamily, i + ""), SdtPeriod.class);
+                                        if (null != sdtPeriodList && sdtPeriodList.size() > 0) {
+                                            if (lastSdtPeriod != null) {
+                                                // add std period by lastSdtPeriod and this hour's first stdPeriod
+                                                SdtPoints sdtPoints = new SdtPoints();
+                                                Point beginPoint = new Point();
+                                                beginPoint.setX(lastSdtPeriod.getEndTime());
+                                                beginPoint.setY(lastSdtPeriod.getEndValue());
+                                                Point lastPoint = new Point();
+                                                lastPoint.setX(sdtPeriodList.get(0).getBgTime());
+                                                lastPoint.setY(sdtPeriodList.get(0).getBgValue());
+                                                sdtPoints.setBeginPoint(beginPoint);
+                                                sdtPoints.setLastPoint(lastPoint);
+                                                // add std period
+                                                mergedSdtPeriodList.add(sdtService.structSdtPeriod(sdtPoints));
+                                            }
+                                            mergedSdtPeriodList.addAll(sdtPeriodList);
+                                            // set last period
+                                            lastSdtPeriod = sdtPeriodList.get(sdtPeriodList.size() - 1);
+                                        }
                                     }
                                 }
 
@@ -282,12 +356,27 @@ public class FlashDbServiceImpl implements FlashDbService {
 
                                 if (null != mergedSdtPeriodList && mergedSdtPeriodList.size() > 0) {
 
+                                    int currentNum = 0;
+
                                     for (SdtPeriod sdtPeriod : mergedSdtPeriodList) {
 
-                                        Point bgPoint = new Point();
-                                        bgPoint.setX(sdtPeriod.getBgTime());
-                                        bgPoint.setY(sdtPeriod.getBgValue());
-                                        pointList.add(bgPoint);
+                                        if (sdtPeriod.getBgTime() >= bgTime && sdtPeriod.getBgTime() <= endTime) {
+
+                                            Point bgPoint = new Point();
+                                            bgPoint.setX(sdtPeriod.getBgTime());
+                                            bgPoint.setY(sdtPeriod.getBgValue());
+
+                                            if (limited) {
+                                                if (limit > currentNum++) {
+                                                    pointList.add(bgPoint);
+                                                } else {
+                                                    break;
+                                                }
+                                            } else {
+                                                pointList.add(bgPoint);
+                                            }
+
+                                        }
 
                                     }
 
@@ -427,7 +516,7 @@ public class FlashDbServiceImpl implements FlashDbService {
         RedisSerializer<String> redisSerializer = (RedisSerializer<String>) stringRedisTemplate.getKeySerializer();
         Cursor<String> cursor = (Cursor) stringRedisTemplate.executeWithStickyConnection((RedisCallback) redisConnection ->
                 new ConvertingCursor<>(redisConnection.scan(scanOptions), redisSerializer::deserialize));
-        while (cursor.hasNext() && limit>keyList.size()) {
+        while (cursor.hasNext() && limit > keyList.size()) {
             keyList.add(cursor.next());
         }
 

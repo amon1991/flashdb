@@ -89,6 +89,44 @@ public class FlashDbServiceImplTest {
     }
 
     @Test
+    public void insertLongTimeData() {
+
+        List<TagPointList> tagPointLists = new ArrayList<>();
+
+        String[] tagCodeArray = {"tagCode001", "tagCode002", "tagCode003"};
+
+        List<Point> pointList = new ArrayList<>();
+
+        long bgTimeStamp = 1546272000000L;
+        long currentTimeStamp = System.currentTimeMillis();
+
+        Random random = new Random();
+        while (currentTimeStamp > bgTimeStamp) {
+
+            Point point = new Point();
+            point.setX(bgTimeStamp);
+            point.setY(random.nextInt(1000));
+            pointList.add(point);
+            bgTimeStamp += 60 * 1000L;
+
+        }
+
+        for (String tagCode : tagCodeArray) {
+
+            TagPointList tagPointList = new TagPointList();
+            tagPointList.setTag(tagCode);
+            tagPointList.setPointList(pointList);
+            tagPointLists.add(tagPointList);
+
+        }
+
+        //System.out.println();
+        int successnum = flashDbService.saveDataPoints(tagPointLists);
+        Assert.assertNotEquals(0, successnum);
+
+    }
+
+    @Test
     public void saveDataPointsAndSearchPoints() throws IOException, ParseException {
 
         String tag = "TestTag01";

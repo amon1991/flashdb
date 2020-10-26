@@ -164,7 +164,7 @@ public class SdtService {
         return pointList;
     }
 
-    private SdtPeriod structSdtPeriod(SdtPoints sdtPoints) {
+    public SdtPeriod structSdtPeriod(SdtPoints sdtPoints) {
         SdtPeriod sdtPeriod = new SdtPeriod();
         sdtPeriod.setBgTime(sdtPoints.getBeginPoint().getX());
         sdtPeriod.setBgValue(sdtPoints.getBeginPoint().getY());
