@@ -1,9 +1,6 @@
 package com.amon.flashtsdb.controller;
 
-import com.amon.flashtsdb.entity.PointsSearchMode;
-import com.amon.flashtsdb.entity.PointsSearchRequest;
-import com.amon.flashtsdb.entity.TagInfo;
-import com.amon.flashtsdb.entity.TagPointList;
+import com.amon.flashtsdb.entity.*;
 import com.amon.flashtsdb.service.FlashDbService;
 import com.amon.flashtsdb.service.impl.FlashDbServiceImpl;
 import io.swagger.annotations.Api;
@@ -106,9 +103,11 @@ public class FlashDbController {
     @ApiOperation(value = "batch saving points", notes = "batch saving points")
     @PostMapping(value = "/points")
     @ResponseBody
-    public ModelMap batchInsertPoints(@RequestBody List<TagPointList> tagPointLists) {
+    public ModelMap batchInsertPoints(@RequestBody InsertPointsRequest insertPointsRequest) {
 
         ModelMap modelMap = new ModelMap();
+        List<TagPointList> tagPointLists = insertPointsRequest.getTagPointLists();
+        Integer savingMode = insertPointsRequest.getSavingMode();
 
         if (CollectionUtils.isNotEmpty(tagPointLists)) {
 
@@ -121,9 +120,15 @@ public class FlashDbController {
                 modelMap.put(SUCCESS, false);
                 modelMap.put(MSG, "tag should be created first");
 
+            } else if (savingMode.intValue() != PointsSavingMode.COVER.getMode().intValue()
+                    && savingMode.intValue() != PointsSavingMode.MERGE.getMode().intValue()) {
+
+                modelMap.put(SUCCESS, false);
+                modelMap.put(MSG, "saving mode should be 0 or 1");
+
             } else {
 
-                if (flashDbService.saveDataPoints(tagPointLists) > 0) {
+                if (flashDbService.saveDataPoints(tagPointLists, PointsSavingMode.COVER.getMode()) > 0) {
 
                     modelMap.put(SUCCESS, true);
                     modelMap.put(MSG, "save data successfully");

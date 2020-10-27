@@ -20,7 +20,7 @@ public interface FlashDbService {
      * @param tagPointLists
      * @return
      */
-    int saveDataPoints(List<TagPointList> tagPointLists);
+    int saveDataPoints(List<TagPointList> tagPointLists, Integer savingMode);
 
 
     /**

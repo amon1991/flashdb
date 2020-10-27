@@ -82,7 +82,8 @@ public class FlashDbServiceImplTest {
             startTime += skipTime;
         }
 
-        List<SplitTagPointList> splitTagPointLists = flashDbService.convert2SplitTagPointList(tagPointLists);
+        List<SplitTagPointList> splitTagPointLists =
+                flashDbService.convert2SplitTagPointList(tagPointLists, PointsSavingMode.MERGE.getMode());
         Assert.assertNotNull(splitTagPointLists);
         Assert.assertEquals(3, splitTagPointLists.get(0).getDayDataList().size());
 
@@ -97,8 +98,8 @@ public class FlashDbServiceImplTest {
 
         List<Point> pointList = new ArrayList<>();
 
-        long bgTimeStamp = 1572134400000L;
-        long currentTimeStamp = System.currentTimeMillis();
+        long bgTimeStamp = 1603643430000L;
+        long currentTimeStamp = 1603650630000L;
 
         Random random = new Random();
         while (currentTimeStamp > bgTimeStamp) {
@@ -121,7 +122,7 @@ public class FlashDbServiceImplTest {
         }
 
         //System.out.println();
-        int successnum = flashDbService.saveDataPoints(tagPointLists);
+        int successnum = flashDbService.saveDataPoints(tagPointLists, PointsSavingMode.MERGE.getMode());
         Assert.assertNotEquals(0, successnum);
 
     }
@@ -141,7 +142,7 @@ public class FlashDbServiceImplTest {
 
         System.out.println(JSON.toJSONString(tagPointLists));
 
-        int successnum = flashDbService.saveDataPoints(tagPointLists);
+        int successnum = flashDbService.saveDataPoints(tagPointLists, PointsSavingMode.COVER.getMode());
         Assert.assertNotEquals(0, successnum);
 
         long bgTime = pointList.get(0).getX();

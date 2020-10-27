@@ -67,18 +67,18 @@ public class FlashDbServiceImpl implements FlashDbService {
     }
 
     @Override
-    public int saveDataPoints(List<TagPointList> tagPointLists) {
-        return dump2Hbase(convert2SplitTagPointList(tagPointLists));
+    public int saveDataPoints(List<TagPointList> tagPointLists, Integer savingMode) {
+        return dump2Hbase(convert2SplitTagPointList(tagPointLists, savingMode));
     }
 
     /**
      * convert tagPointLists to SplitTagPointLists
-     * （将原始数据转换为hbase存储数据）
+     * （将原始数据转换为hbase存储数据,结合插入模式，需要动态追加hbase中已存在的部分测点数据）
      *
      * @param tagPointLists
      * @return
      */
-    public List<SplitTagPointList> convert2SplitTagPointList(List<TagPointList> tagPointLists) {
+    public List<SplitTagPointList> convert2SplitTagPointList(List<TagPointList> tagPointLists, Integer savingMode) {
 
         if (null != tagPointLists && tagPointLists.size() > 0) {
 
@@ -87,13 +87,14 @@ public class FlashDbServiceImpl implements FlashDbService {
             Set<String> tagSet = tagPointLists.stream().map(p -> TAGINFO_LIST + p.getTag()).collect(Collectors.toSet());
 
             Map<String, String> tagMap = redisStringBatchGet(new ArrayList<>(tagSet));
-            Map<String, TagInfo> tagInfoMap = new HashMap<>();
+            Map<String, TagInfo> tagInfoMap = new HashMap<>(16);
             for (String tagInfoStr : tagMap.values()) {
                 if (null != tagInfoStr) {
                     TagInfo tagInfo = JSON.parseObject(tagInfoStr, TagInfo.class);
                     tagInfoMap.put(tagInfo.getTagCode(), tagInfo);
                 }
             }
+
 
             for (TagPointList tagPointList : tagPointLists) {
 
@@ -102,6 +103,101 @@ public class FlashDbServiceImpl implements FlashDbService {
 
                 // sort point by timestamp first
                 Collections.sort(pointList);
+                int pointSize = pointList.size();
+
+                long bgTimeStamp = pointList.get(0).getX();
+                long endTimeStamp = pointList.get(pointList.size() - 1).getX();
+                int bgHour = Math.toIntExact(bgTimeStamp / (3600 * 1000L));
+                int endHour = Math.toIntExact(endTimeStamp / (3600 * 1000L));
+
+                // get added data from hbase
+                if (savingMode.intValue() == PointsSavingMode.COVER.getMode()) {
+
+                    // left search
+                    PointsSearchRequest pointsSearchRequest = generatePointsSearchRequest(tag,
+                            bgTimeStamp, bgTimeStamp / (3600 * 1000L));
+                    List<TagPointList> leftPoints = searchPoints(pointsSearchRequest);
+
+                    if (bgHour == endHour) {
+
+                        // add two side points within one hour
+                        for (TagPointList leftPoint : leftPoints) {
+                            if (leftPoint.getTag().equals(tag)) {
+                                List<Point> points = leftPoint.getPointList();
+                                if (CollectionUtils.isNotEmpty(points)) {
+                                    for (Point point : points) {
+                                        if (point.getX() < bgTimeStamp || point.getX() > endTimeStamp) {
+                                            pointList.add(point);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+
+                    } else {
+
+                        // right search
+                        pointsSearchRequest.setBgTime(endTimeStamp / (3600 * 1000L) * (3600 * 1000L));
+                        pointsSearchRequest.setEndTime((endTimeStamp / (3600 * 1000L) + 1) * (3600 * 1000L) - 1L);
+                        List<TagPointList> rightPoints = searchPoints(pointsSearchRequest);
+
+                        // add left points
+                        for (TagPointList leftPoint : leftPoints) {
+                            if (leftPoint.getTag().equals(tag)) {
+                                List<Point> points = leftPoint.getPointList();
+                                if (CollectionUtils.isNotEmpty(points)) {
+                                    for (Point point : points) {
+                                        if (point.getX() < bgTimeStamp) {
+                                            pointList.add(point);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // add right points
+                        for (TagPointList rightPoint : rightPoints) {
+                            if (rightPoint.getTag().equals(tag)) {
+                                List<Point> points = rightPoint.getPointList();
+                                if (CollectionUtils.isNotEmpty(points)) {
+                                    for (Point point : points) {
+                                        if (point.getX() > endTimeStamp) {
+                                            pointList.add(point);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+
+                } else if (savingMode.intValue() == PointsSavingMode.MERGE.getMode()) {
+
+                    // all time range search
+                    PointsSearchRequest pointsSearchRequest = generatePointsSearchRequest(tag,
+                            bgTimeStamp, endTimeStamp / (3600 * 1000L));
+
+                    Set<String> pointTimeStampSet = pointList.stream().map(p -> p.getX() + "").collect(Collectors.toSet());
+
+                    List<TagPointList> allPoints = searchPoints(pointsSearchRequest);
+
+                    for (TagPointList allPoint : allPoints) {
+                        if (allPoint.getTag().equals(tag)) {
+                            for (Point point : allPoint.getPointList()) {
+                                if (!pointTimeStampSet.contains(point.getX() + "")) {
+                                    pointList.add(point);
+                                }
+                            }
+                        }
+                    }
+
+                }
+
+                if (pointList.size() > pointSize) {
+                    // do sort second time
+                    Collections.sort(pointList);
+                }
 
                 SplitTagPointList splitTagPointList = new SplitTagPointList();
                 splitTagPointLists.add(splitTagPointList);
@@ -154,6 +250,17 @@ public class FlashDbServiceImpl implements FlashDbService {
 
         }
         return new ArrayList<>();
+    }
+
+    private PointsSearchRequest generatePointsSearchRequest(String tag, long bgTimeStamp, long l) {
+        PointsSearchRequest pointsSearchRequest = new PointsSearchRequest();
+        pointsSearchRequest.setSearchMode(PointsSearchMode.RAW.getMode());
+        pointsSearchRequest.setLimit(-1);
+        pointsSearchRequest.setSearchInterval(0);
+        pointsSearchRequest.setTagList(Arrays.asList(tag));
+        pointsSearchRequest.setBgTime(bgTimeStamp / (3600 * 1000L) * (3600 * 1000L));
+        pointsSearchRequest.setEndTime((l + 1) * (3600 * 1000L) - 1L);
+        return pointsSearchRequest;
     }
 
     public Integer getDayTimeStamp(long timestamp) {
