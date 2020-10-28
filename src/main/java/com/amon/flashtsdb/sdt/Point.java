@@ -25,6 +25,13 @@ public class Point implements Comparable<Point> {
         this.y = y;
     }
 
+    public Point(long x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public Point() {
+    }
 
     @Override
     public int compareTo(Point point) {

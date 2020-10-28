@@ -3,8 +3,10 @@ package com.amon.flashtsdb.service;
 import com.amon.flashtsdb.entity.PointsSearchRequest;
 import com.amon.flashtsdb.entity.TagInfo;
 import com.amon.flashtsdb.entity.TagPointList;
+import com.amon.flashtsdb.sdt.Point;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -21,6 +23,23 @@ public interface FlashDbService {
      * @return
      */
     int saveDataPoints(List<TagPointList> tagPointLists, Integer savingMode);
+
+
+    /**
+     * save realtime points to redis
+     *
+     * @param pointMap
+     */
+    void saveRealtimePoints(Map<String, Point> pointMap);
+
+
+    /**
+     * search realtime points
+     *
+     * @param tagCodeSet
+     * @return
+     */
+    Map<String, Point> searchRealtimePoints(Set<String> tagCodeSet);
 
 
     /**

@@ -185,4 +185,19 @@ public class FlashDbController {
 
     }
 
+    @ApiOperation(value = "search realtime data", notes = "search realtime data")
+    @PostMapping(value = "/points/realtime")
+    @ResponseBody
+    public ModelMap realtimeData(@RequestBody List<String> tagList) {
+
+        ModelMap modelMap = new ModelMap();
+        modelMap.put(DATA, flashDbService.searchRealtimePoints(new HashSet<>(tagList)));
+        modelMap.put(SUCCESS, true);
+        modelMap.put(MSG, "get points data successfully");
+
+        return modelMap;
+
+    }
+
+
 }

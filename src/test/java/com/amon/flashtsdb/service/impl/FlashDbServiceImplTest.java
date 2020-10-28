@@ -30,6 +30,27 @@ public class FlashDbServiceImplTest {
     private FlashDbServiceImpl flashDbService;
 
     @Test
+    public void testRealtimeSetAndGet() {
+
+        String tagCode01 = "tagCode001";
+        String tagCode02 = "tagCode002";
+        Random random = new Random();
+
+        Map<String, Point> pointMap = new HashMap<>();
+        int value1 = random.nextInt(100);
+        int value2 = random.nextInt(100);
+
+        pointMap.put(tagCode01, new Point(System.currentTimeMillis(), value1));
+        pointMap.put(tagCode02, new Point(System.currentTimeMillis(), value2));
+        flashDbService.saveRealtimePoints(pointMap);
+
+        Map<String, Point> dbPointMap = flashDbService.searchRealtimePoints(new HashSet<>(Arrays.asList(tagCode01, tagCode02)));
+        Assert.assertEquals((int) dbPointMap.get(tagCode01).getY(), value1);
+        Assert.assertEquals((int) dbPointMap.get(tagCode02).getY(), value2);
+
+    }
+
+    @Test
     public void getDayTimeStamp() throws ParseException {
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -98,8 +119,8 @@ public class FlashDbServiceImplTest {
 
         List<Point> pointList = new ArrayList<>();
 
-        long bgTimeStamp = 1603643430000L;
-        long currentTimeStamp = 1603650630000L;
+        long bgTimeStamp = 1603843200000L;
+        long currentTimeStamp = System.currentTimeMillis();
 
         Random random = new Random();
         while (currentTimeStamp > bgTimeStamp) {
@@ -122,7 +143,7 @@ public class FlashDbServiceImplTest {
         }
 
         //System.out.println();
-        int successnum = flashDbService.saveDataPoints(tagPointLists, PointsSavingMode.MERGE.getMode());
+        int successnum = flashDbService.saveDataPoints(tagPointLists, PointsSavingMode.COVER.getMode());
         Assert.assertNotEquals(0, successnum);
 
     }

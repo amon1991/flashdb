@@ -180,10 +180,43 @@
 
         // reset data
         $('#data-tag-code').val(tagcode);
+        $('#realtime-value').html("--");
+        $('#realtime-time').html("--");
+
+
         var endTime = Date.parse(new Date());
         var bgTime = endTime - 3600 * 4 * 1000;
         var defaultTimeRange = timestampToTime(bgTime) + " - " + timestampToTime(endTime);
         $('#data-range').val(defaultTimeRange);
+
+        // get realtime data
+        var tagCodeArr = [];
+        tagCodeArr.push(tagcode);
+
+        // do post
+        $.ajax({
+            url: "/apis/flashtsdb/points/realtime",
+            type: "POST",
+            data: JSON.stringify(tagCodeArr),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (result) {
+                if (result.success == true) {
+
+                    var obj = result.data;
+
+                    for (let k of Object.keys(obj)) {
+                        if (k == tagcode) {
+                            $('#realtime-value').html(obj[k].y);
+                            $('#realtime-time').html(timestampToTime(obj[k].x));
+                            break;
+                        }
+                    }
+
+                }
+
+            }
+        });
 
         // do default search
         searchpoints();
@@ -386,19 +419,19 @@
 
         <div class="layui-row" style="margin-top: 20px;padding-left: 20px;">
             <div class="layui-col-md3">
-                Measured Value - todo
+                Measured Value
             </div>
             <div class="layui-col-md3">
-                Measured Time - todo
+                Measured Time
             </div>
             <div class="layui-col-md6">
             </div>
         </div>
         <div class="layui-row" style="margin-top: 20px;margin-bottom:20px;padding-left: 20px;">
-            <div class="layui-col-md3">
-                28.3
+            <div class="layui-col-md3" id="realtime-value">
+                28.311
             </div>
-            <div class="layui-col-md3">
+            <div class="layui-col-md3" id="realtime-time">
                 2020-10-22 10:23:56
             </div>
             <div class="layui-col-md6">
