@@ -183,7 +183,6 @@
         $('#realtime-value').html("--");
         $('#realtime-time').html("--");
 
-
         var endTime = Date.parse(new Date());
         var bgTime = endTime - 3600 * 4 * 1000;
         var defaultTimeRange = timestampToTime(bgTime) + " - " + timestampToTime(endTime);
@@ -376,10 +375,11 @@
         <div class="layui-form-item">
             <label class="layui-form-label">accuracy</label>
             <div class="layui-input-inline">
-                <input type="text" name="accuracyE" required lay-verify="required" placeholder="pleae input accuracy"
+                <input type="text" name="accuracyE" required lay-verify="required|number|accuracye"
+                       placeholder="pleae input accuracy"
                        autocomplete="off" class="layui-input">
             </div>
-            <div class="layui-form-mid layui-word-aux">decimals,from 0 to 1</div>
+            <div class="layui-form-mid layui-word-aux">decimals,greater than 0</div>
         </div>
 
         <div class="layui-form-item">
@@ -463,7 +463,6 @@
                             <option value="0" selected>Raw Data</option>
                             <option value="1">Interpolated Data</option>
                         </select>
-
                     </div>
                 </div>
             </div>
@@ -488,7 +487,16 @@
     layui.use('form', function () {
         var form = layui.form;
 
-        //listen for submit
+        // self-defined verify
+        form.verify({
+            accuracye: function (value, item) {
+                if (value <= 0) {
+                    return 'it has to be greator than 0'
+                }
+            }
+        });
+
+        // listen for submit
         form.on('submit(create-tag-form)', function (data) {
 
             var datas = [];
@@ -524,9 +532,11 @@
         laydate.render({
             elem: '#data-range',
             type: 'datetime',
-            range: true
+            range: true,
+            lang: 'en'
         });
     });
+
 
 </script>
 

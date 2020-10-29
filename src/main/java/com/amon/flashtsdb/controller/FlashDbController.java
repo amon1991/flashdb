@@ -46,9 +46,9 @@ public class FlashDbController {
 
 
             for (TagInfo tagInfo : tagInfoList) {
-                if (tagInfo.getAccuracyE() >= 1 || tagInfo.getAccuracyE() <= 0) {
+                if (tagInfo.getAccuracyE() <= 0) {
                     modelMap.put(SUCCESS, false);
-                    modelMap.put(MSG, "tag code:" + tagInfo.getTagCode() + ",accuracyE should in (0,1),plesse check.");
+                    modelMap.put(MSG, "tag code:" + tagInfo.getTagCode() + ",accuracyE should greater than 0");
                     return modelMap;
                 }
                 tagInfo.setCreatetime(System.currentTimeMillis());
