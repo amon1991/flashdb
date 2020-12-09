@@ -228,8 +228,8 @@ public class HBaseUtil {
         if (admin.tableExists(TableName.valueOf(tableName))) {
             Table table = connection.getTable(TableName.valueOf(tableName));
             Scan scan = new Scan();
-            scan.withStartRow(startRowKey);
-            scan.withStopRow(stopRowKey);
+            scan.setStartRow(startRowKey);
+            scan.setStopRow(stopRowKey);
             ResultScanner rs = table.getScanner(scan);
             table.close();
             return rs;

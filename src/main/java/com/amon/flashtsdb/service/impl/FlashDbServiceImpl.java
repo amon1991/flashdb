@@ -42,6 +42,8 @@ public class FlashDbServiceImpl implements FlashDbService {
 
     private static final String TAG_REALTIME = "TAG_REALTIME:";
 
+    private static final int MAX_BATCH_DAY_SIZE = 40000;
+
     @Value("${flashtsdb.config.tablename}")
     private String hbaseTableName;
 
@@ -55,6 +57,7 @@ public class FlashDbServiceImpl implements FlashDbService {
     private final SdtService sdtService;
     private final StringRedisTemplate stringRedisTemplate;
 
+
     @Autowired
     public FlashDbServiceImpl(HBaseUtil hBaseUtil,
                               RowKeyUtil rowKeyUtil,
@@ -66,9 +69,65 @@ public class FlashDbServiceImpl implements FlashDbService {
         this.stringRedisTemplate = stringRedisTemplate;
     }
 
+    /**
+     * 保存客户端传入数据
+     *
+     * @param tagPointLists
+     * @param savingMode
+     * @return success day count
+     */
     @Override
     public int saveDataPoints(List<TagPointList> tagPointLists, Integer savingMode) {
-        return dump2Hbase(convert2SplitTagPointList(tagPointLists, savingMode));
+
+        List<SplitTagPointList> dataList = convert2SplitTagPointList(tagPointLists, savingMode);
+
+        List<List<SplitTagPointList>> dataListGroup = computeTagPointListGroup(dataList);
+
+        int sumcount = 0;
+
+        for (List<SplitTagPointList> splitTagPointLists : dataListGroup) {
+            sumcount += dump2Hbase(splitTagPointLists);
+            System.out.println("success: ----- ");
+        }
+
+        return sumcount;
+    }
+
+    /**
+     * 为防止单次写入数据量过大，对写入数据进行分组
+     *
+     * @param dataList
+     * @return
+     */
+    private List<List<SplitTagPointList>> computeTagPointListGroup(List<SplitTagPointList> dataList) {
+
+        List<List<SplitTagPointList>> tagPointListGroup = new ArrayList<>();
+
+        int daySize = 0;
+
+        if (CollectionUtils.isNotEmpty(dataList)) {
+
+            List<SplitTagPointList> dataset = new ArrayList<>();
+            tagPointListGroup.add(dataset);
+
+            for (SplitTagPointList splitTagPointList : dataList) {
+
+                if (daySize + splitTagPointList.getDayDataList().size() > MAX_BATCH_DAY_SIZE) {
+                    dataset = new ArrayList<>();
+                    tagPointListGroup.add(dataset);
+                    dataset.add(splitTagPointList);
+                    daySize = splitTagPointList.getDayDataList().size();
+                } else {
+                    dataset.add(splitTagPointList);
+                    daySize += splitTagPointList.getDayDataList().size();
+                }
+
+            }
+
+        }
+
+        return tagPointListGroup;
+
     }
 
     @Override
@@ -381,9 +440,11 @@ public class FlashDbServiceImpl implements FlashDbService {
 
         if (null != dataList && dataList.size() > 0) {
 
-            Map<byte[], List<FlashCell>> dataMap = new HashMap<>(dataList.size() * 2);
+            int successDay = 0;
 
             for (SplitTagPointList tagOriginalEntity : dataList) {
+
+                Map<byte[], List<FlashCell>> dataMap = new HashMap<>(dataList.size() * 2);
 
                 // tag level
                 double accuracyE = defaultAccuracy;
@@ -428,15 +489,17 @@ public class FlashDbServiceImpl implements FlashDbService {
 
                 }
 
+                try {
+                    successDay += hBaseUtil.batchInsertRows(hbaseTableName, dataMap);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    logger.error("Batch insert rows failed,errorMsg:{}", e.getMessage(), e);
+                    return successDay;
+                }
+
             }
 
-            try {
-                return hBaseUtil.batchInsertRows(hbaseTableName, dataMap);
-            } catch (Exception e) {
-                e.printStackTrace();
-                logger.error("Batch insert rows failed,errorMsg:{}", e.getMessage(), e);
-                return 0;
-            }
+            return successDay;
 
         }
 
@@ -646,8 +709,6 @@ public class FlashDbServiceImpl implements FlashDbService {
      */
     @Override
     public List<TagInfo> searchTags(String regex, int limit) {
-
-        //Set<String> keyList = stringRedisTemplate.keys(TAGINFO_LIST + "*" + regex + "*");
 
         Set<String> keyList = new HashSet<>(16 * 16);
 

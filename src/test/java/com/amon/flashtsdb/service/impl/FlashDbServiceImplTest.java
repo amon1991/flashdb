@@ -115,19 +115,20 @@ public class FlashDbServiceImplTest {
 
         List<TagPointList> tagPointLists = new ArrayList<>();
 
-        String[] tagCodeArray = {"tagCode001", "tagCode002", "tagCode003"};
+        String[] tagCodeArray = {"tag01", "tag02"};
 
         List<Point> pointList = new ArrayList<>();
 
-        long bgTimeStamp = 1603843200000L;
+        long bgTimeStamp = 1572421865000L;
         long currentTimeStamp = System.currentTimeMillis();
 
-        Random random = new Random();
+        int begin = 0;
+        //Random random = new Random();
         while (currentTimeStamp > bgTimeStamp) {
 
             Point point = new Point();
             point.setX(bgTimeStamp);
-            point.setY(random.nextInt(1000));
+            point.setY(100 * Math.sin(begin++));
             pointList.add(point);
             bgTimeStamp += 60 * 1000L;
 
@@ -231,5 +232,6 @@ public class FlashDbServiceImplTest {
         Assert.assertEquals(3, deleteNum);
 
     }
+
 
 }
