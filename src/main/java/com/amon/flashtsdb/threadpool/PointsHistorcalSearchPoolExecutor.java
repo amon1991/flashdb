@@ -13,8 +13,8 @@ public final class PointsHistorcalSearchPoolExecutor {
     private static AtomicInteger threadNum = new AtomicInteger(0);
 
     private static final ExecutorService executorService = new ThreadPoolExecutor(
-            10,
-            10,
+            50,
+            50,
             60,
             TimeUnit.SECONDS,
             new LinkedBlockingQueue<Runnable>(),
