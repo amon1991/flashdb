@@ -11,9 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -31,7 +29,7 @@ public class SearchTest {
     private int initnum = 1000;
 
     @Test
-    public void rawSearchTest() {
+    public void historicalSearchTest() {
 
         List<TagInfo> tagInfoList = flashDbService.searchTags("", initnum);
 
@@ -67,7 +65,7 @@ public class SearchTest {
 
         long eBgTime = System.currentTimeMillis();
         for (int i = 0; i < currentSize; i++) {
-            Thread thread = new Thread(new PerformanceSearch(cdl, flashDbService, executeTimeList, pointsSearchRequest));
+            Thread thread = new Thread(new PerformanceHistoricalSearch(cdl, flashDbService, executeTimeList, pointsSearchRequest));
             thread.start();
         }
         try {
@@ -84,6 +82,47 @@ public class SearchTest {
             sumTime += time;
         }
         System.out.println("Avg time:" + (sumTime / executeTimeList.size()) + "ms");
+
+    }
+
+    @Test
+    public void realtimeSearchTest() {
+
+        List<TagInfo> tagInfoList = flashDbService.searchTags("", initnum);
+
+        Set<String> tagcodeSet = new HashSet<>();
+
+        int tagnum = 1000;
+
+        for (int i = 0; i < tagnum; i++) {
+            tagcodeSet.add(tagInfoList.get(i).getTagCode());
+        }
+
+        int currentSize = 1000;
+
+        CountDownLatch cdl = new CountDownLatch(currentSize);
+        List<Long> executeTimeList = Collections.synchronizedList(new ArrayList<>());
+
+        long eBgTime = System.currentTimeMillis();
+        for (int i = 0; i < currentSize; i++) {
+            Thread thread = new Thread(new PerformanceRealtimeSearch(cdl, flashDbService, executeTimeList, tagcodeSet));
+            thread.start();
+        }
+        try {
+            // 等待所有并发线程执行完毕
+            cdl.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        long eEndTime = System.currentTimeMillis();
+        System.out.println("All time:" + (eEndTime - eBgTime) + "ms");
+
+        long sumTime = 0;
+        for (Long time : executeTimeList) {
+            sumTime += time;
+        }
+        System.out.println("Avg time:" + (sumTime / executeTimeList.size()) + "ms");
+
 
     }
 
