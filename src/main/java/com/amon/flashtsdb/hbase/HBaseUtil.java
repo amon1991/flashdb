@@ -32,8 +32,14 @@ public class HBaseUtil {
     private Connection connection;
     public static final Logger LOGGER = LoggerFactory.getLogger(HBaseUtil.class);
 
+    private static final String GZ = "GZ";
+    private static final String SNAPPY = "SNAPPY";
+
     @Value("${hbase.config.hbase.zookeeper.quorum}")
     private String zookeeperQuorum;
+
+    @Value("${hbase.config.hbase.compression.algorithm}")
+    private String compressionAlgorithm;
 
     private final ConfigurableApplicationContext context;
 
@@ -73,8 +79,17 @@ public class HBaseUtil {
         } else {
             HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(tableName));
             for (String columnFamily : columnFamilys) {
-                // set table Compression is gz (save space)
-                tableDesc.addFamily(new HColumnDescriptor(columnFamily).setCompactionCompressionType(Compression.Algorithm.SNAPPY));
+
+                if (compressionAlgorithm.equals(SNAPPY)) {
+                    // set table Compression is gz (better performance)
+                    tableDesc.addFamily(new HColumnDescriptor(columnFamily).setCompactionCompressionType(Compression.Algorithm.SNAPPY));
+                } else if (compressionAlgorithm.equals(GZ)) {
+                    // set table Compression is gz (save space)
+                    tableDesc.addFamily(new HColumnDescriptor(columnFamily).setCompactionCompressionType(Compression.Algorithm.GZ));
+                } else {
+                    tableDesc.addFamily(new HColumnDescriptor(columnFamily));
+                }
+
             }
             admin.createTable(tableDesc);
             LOGGER.info("Create table successfully,table name:{}", tableName);

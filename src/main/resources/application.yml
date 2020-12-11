@@ -12,7 +12,10 @@ flashtsdb:
 
 hbase:
   config:
-    hbase.zookeeper.quorum: zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+    #hbase.zookeeper.quorum: zookeeper1:2181,zookeeper2:2181,zookeeper3:2181
+    #hbase.compression.algorithm: SNAPPY
+    hbase.zookeeper.quorum: myhbase:2181
+    hbase.compression.algorithm: GZ
 
 spring:
   thymeleaf:
@@ -29,7 +32,7 @@ spring:
     password: dpp123456+_)
     host: redis-host
     port: 6379
-    database: 10
+    database: 11
     jedis:
       pool:
         max-active: 8
