@@ -29,10 +29,10 @@ spring:
     prefix: classpath:/templates/
     suffix: .html
   redis:
-    password: dpp123456+_)
-    host: redis-host
+    #password: testpasswd
+    host: myredis
     port: 6379
-    database: 11
+    database: 0
     jedis:
       pool:
         max-active: 8

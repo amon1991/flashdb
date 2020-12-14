@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.amon</groupId>
     <artifactId>flashtsdb</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-RELEASE</version>
     <name>flashtsdb</name>
     <description>Demo project for Spring Boot</description>
 
@@ -106,10 +106,21 @@
 
     <build>
         <plugins>
+
+            <!-- maven package-->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 
