@@ -6,9 +6,9 @@ MAINTAINER yaming.chen <yaming.chen@foxmail.com>
 VOLUME /tmp
 
 # COPY or ADD to image
-COPY flashtsdb-1.0.0-RELEASE.jar app.jar
+COPY flashtsdb-1.0.1-RELEASE.jar app.jar
 
-RUN bash -c "touch /app.jar"
+#RUN bash -c "touch /app.jar"
 
 EXPOSE 8066
 

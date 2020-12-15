@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration scan="true" scanPeriod="600 seconds">
+
+    <!-- 日志文件名 -->
+    <property scop="context" name="FILE_NAME" value="flashtsdb"/>
+    <!-- 日期格式约束 -->
+    <timestamp key="date_pattern" datePattern="yyyy-MM-dd"/>
+
+    <!-- IDEA 中打印彩色日志依赖的渲染类 -->
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex" converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter" />
+    <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter" />
+
+    <!-- ############ 以下按部署环境设置日志输出格式 ############ -->
+
+    <!-- 1. 本地开发环境，控制台输出 -->
+    <springProfile name="dev">
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>[%clr(%d{HH:mm:ss.SSS}){faint}] [%clr(${LOG_LEVEL_PATTERN:-%5p})] %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(%4.4L){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+        <!-- 日志输出级别 -->
+        <root level="INFO">
+            <appender-ref ref="STDOUT"/>
+        </root>
+
+        <!-- 配置第三方包的日志输出级别，避免调试时刷屏 -->
+        <logger name="org.springframework.boot" level="WARN"/>
+    </springProfile>
+
+    <!-- 2. 测试环境，输出到文件 -->
+    <springProfile name="prod">
+        <appender name="PROD" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <!-- 每天产生一个日志文件，最多 60 个，自动回滚 -->
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>/var/log/flashtsdb-%d.log</fileNamePattern>
+                <maxHistory>60</maxHistory>
+            </rollingPolicy>
+            <encoder>
+                <pattern>[%d{HH:mm:ss.SSS}] [%5p] [%15.15t] %-40.40logger{39} %4.4L : %m%n</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+
+        <!-- 日志输出级别 -->
+        <root level="INFO">
+            <appender-ref ref="PROD"/>
+        </root>
+    </springProfile>
+
+
+</configuration>

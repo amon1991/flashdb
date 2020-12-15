@@ -39,4 +39,9 @@ spring:
         max-wait: -1
         max-idle: 8
         min-idle: 0
+  profiles:
+    active: dev #prod
+
+logging:
+  config: classpath:config/logback-spring.xml
 
