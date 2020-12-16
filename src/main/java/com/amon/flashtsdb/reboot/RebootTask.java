@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2020/2/12.
  */
 @Component

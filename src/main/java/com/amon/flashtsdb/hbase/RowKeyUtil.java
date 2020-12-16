@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 /**
  * This class is designed for hbase rowkey convert with tag
  *
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2020/1/19.
  */
 @Service

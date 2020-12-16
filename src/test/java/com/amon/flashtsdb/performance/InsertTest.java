@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2020/10/30.
  */
 @RunWith(SpringRunner.class)

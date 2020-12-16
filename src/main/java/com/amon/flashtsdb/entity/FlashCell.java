@@ -3,7 +3,7 @@ package com.amon.flashtsdb.entity;
 import java.io.Serializable;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2020/1/19.
  */
 public class FlashCell implements Serializable {

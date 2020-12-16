@@ -9,7 +9,6 @@ VOLUME /tmp
 COPY flashtsdb-1.0.1-RELEASE.jar app.jar
 
 #RUN bash -c "touch /app.jar"
-
 EXPOSE 8066
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh","-c","java -jar app.jar ${BOOT_OPTIONS}"]

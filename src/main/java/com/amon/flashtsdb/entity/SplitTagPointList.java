@@ -3,7 +3,7 @@ package com.amon.flashtsdb.entity;
 import java.util.List;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2020/1/20.
  */
 public class SplitTagPointList {

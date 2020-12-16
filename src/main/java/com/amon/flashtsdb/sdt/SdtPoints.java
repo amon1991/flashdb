@@ -1,7 +1,7 @@
 package com.amon.flashtsdb.sdt;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2019/11/27.
  */
 public class SdtPoints {

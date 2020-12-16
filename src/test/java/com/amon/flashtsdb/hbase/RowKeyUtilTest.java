@@ -13,7 +13,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import static com.amon.flashtsdb.hbase.RowKeyUtil.TAGID_INDEX;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2020/1/19.
  */
 @RunWith(SpringRunner.class)

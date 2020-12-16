@@ -3,7 +3,7 @@ package com.amon.flashtsdb.entity;
 import java.util.List;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2020/10/27.
  */
 public class InsertPointsRequest {

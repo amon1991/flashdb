@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 import static com.amon.flashtsdb.hbase.RowKeyUtil.TAGID_INDEX;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2020/1/20.
  */
 @Service

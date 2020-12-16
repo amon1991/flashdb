@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration scan="true" scanPeriod="600 seconds">
 
-    <!-- 日志文件名 -->
     <property scop="context" name="FILE_NAME" value="flashtsdb"/>
-    <!-- 日期格式约束 -->
     <timestamp key="date_pattern" datePattern="yyyy-MM-dd"/>
 
-    <!-- IDEA 中打印彩色日志依赖的渲染类 -->
+    <!-- IDEA Print color log dependent rendering class -->
     <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
     <conversionRule conversionWord="wex" converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter" />
     <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter" />
 
-    <!-- ############ 以下按部署环境设置日志输出格式 ############ -->
+    <!-- ############ The following sets the log output format according to the deployment environment ############ -->
 
-    <!-- 1. 本地开发环境，控制台输出 -->
+    <!-- 1. Local development environment, console output -->
     <springProfile name="dev">
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
@@ -26,14 +24,14 @@
             <appender-ref ref="STDOUT"/>
         </root>
 
-        <!-- 配置第三方包的日志输出级别，避免调试时刷屏 -->
+        <!-- Configure the logging output level of third-party packages to avoid refresh during debugging -->
         <logger name="org.springframework.boot" level="WARN"/>
     </springProfile>
 
-    <!-- 2. 测试环境，输出到文件 -->
+    <!-- 2. Test environment, output to file -->
     <springProfile name="prod">
         <appender name="PROD" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <!-- 每天产生一个日志文件，最多 60 个，自动回滚 -->
+            <!-- Generate one log file per day, up to 60, and automatically roll back -->
             <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
                 <fileNamePattern>/var/log/flashtsdb-%d.log</fileNamePattern>
                 <maxHistory>60</maxHistory>
@@ -44,7 +42,7 @@
             </encoder>
         </appender>
 
-        <!-- 日志输出级别 -->
+        <!-- Log output level -->
         <root level="INFO">
             <appender-ref ref="PROD"/>
         </root>

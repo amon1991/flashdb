@@ -1,7 +1,7 @@
 package com.amon.flashtsdb.entity;
 
 /**
- * @author yaming.chen@siemens.com
+ * @author yaming.chen@foxmail.com
  * Created by chenyaming on 2018/3/22.
  */
 public enum PointsSearchMode {
