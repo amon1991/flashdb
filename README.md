@@ -1,6 +1,12 @@
 ## &nbsp;
 ## FlashTsDB时序数据库介绍
 
+* **更多介绍内容**
+	* 1、FlashTsDB时序数据库介绍：<https://blog.csdn.net/amon1991/article/details/111885667>
+	* 2、FlashTsDB时序数据库-SDT算法（Java）实现：<https://blog.csdn.net/amon1991/article/details/111885751>
+	* 3、FlashTsDB时序数据库-Hbase 存储结构设计：<https://blog.csdn.net/amon1991/article/details/111885808>
+	* 4、FlashTsDB时序数据库-性能测试：<https://blog.csdn.net/amon1991/article/details/111885876>
+
 
 ### 1、What is FlashTsDB
 #### 1.1 背景
