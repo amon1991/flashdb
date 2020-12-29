@@ -55,23 +55,30 @@ FlashTsDB着眼于解决时序库的最核心问题，目前提供了如下特�
 
 ### 3、FlashTsDB at a glance
 #### 3.1 界面概览
+
 ![image](https://github.com/amon1991/flashdb/blob/master/src/main/resources/introimages/2.png)
+
 上图是FlashTsDB的主界面
 * 在页面左上方可查询当前数据库中的测点列表（支持模糊查询）
 * 在页面右上方可新建测点
 * 对于每个测点，可查询详情
+
 ![image](https://github.com/amon1991/flashdb/blob/master/src/main/resources/introimages/3.png)
+
 上图为新建测点界面，其中可通过设置accuracy（精确度）设置压缩时旋转门的大小
 
 
 #### 3.2 查询测点实时/历史数据
+
 ![image](https://github.com/amon1991/flashdb/blob/master/src/main/resources/introimages/4.png)
 
 * 在上图中，可查询测点的实时数据和历史数据
 * 历史数据查询支持查询实际数据和插值数据
 
 #### 3.3 Restful API
+
 ![image](https://github.com/amon1991/flashdb/blob/master/src/main/resources/introimages/5.png)
+
 用户可通过swagger界面查询和测试FlashTsDB支持的客户端API，具体支持的API功能如下所示：
 
 ##### 3.3.1 创建测点元数据
