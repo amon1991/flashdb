@@ -19,8 +19,8 @@ public class SdtService {
     /**
      * SDT algorithm compress function
      *
-     * @param originPoints
-     * @param accuracyE
+     * @param originPoints 待压缩的点集
+     * @param accuracyE    旋转门大小
      * @return
      */
     public List<SdtPeriod> sdtCompress(List<Point> originPoints, double accuracyE) {
@@ -85,10 +85,10 @@ public class SdtService {
     /**
      * SDT algorithm uncompress function
      *
-     * @param sdtPeriodList
-     * @param bgTime
-     * @param endTime
-     * @param interval
+     * @param sdtPeriodList 压缩段集合
+     * @param bgTime        返回点集开始时间
+     * @param endTime       返回点集结束时间
+     * @param interval      返回点集2点间隔
      * @return
      */
     public List<Point> sdtUnCompress(List<SdtPeriod> sdtPeriodList, long bgTime, long endTime, long interval) {

@@ -1,5 +1,6 @@
 package com.amon.flashtsdb.sdt;
 
+import com.alibaba.fastjson.JSON;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,9 @@ public class SdtServiceTest {
         List<Point> pointList = getPointsFromTestFile();
 
         List<SdtPeriod> sdtPeriodList = sdtService.sdtCompress(pointList, 1d);
+
+        System.out.println(JSON.toJSONString(sdtPeriodList));
+
         Assert.assertEquals(4, sdtPeriodList.size());
 
         sdtPeriodList = sdtService.sdtCompress(pointList, 0.2d);
