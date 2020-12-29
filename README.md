@@ -434,7 +434,7 @@ docker run -e BOOT_OPTIONS="-Xms4g -Xmx4g -Xmn3g" -d -p 8066:8066 --link myredis
 hbase网页地址：http://部署机ip:16010/master-status
 flash网页地址：http://部署机ip:8066/portal/index
 
-##### 4.1 集群部署
+##### 4.2 集群部署
 修改源码中的配置文件：
 ```java
 hbase:
